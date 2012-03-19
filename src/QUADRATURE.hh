@@ -23,6 +23,25 @@ class QUADRATURE
     /// Build the quadrature, i.e. M,D and omega (direction vector).
     void Build_quadrature();
 
+    /// Return the number of directions of the quadrature.
+    unsigned int Get_n_dir() const;
+
+    /// Return the number of moments.
+    unsigned int Get_n_mom() const;
+
+    /// Return a pointer to omega for direction idir.
+    Teuchos::SerialDenseVector<int,double> const* const Get_omega(unsigned int idir) 
+      const;
+
+    /// Return the first two components of omega for direction idir.
+    Teuchos::SerialDenseVector<int,double> Get_omega_2d(unsigned int idir) const;
+
+    /// Return the moment-to-discrete matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_M2D() const;
+
+    /// Return the discrete-to-moment matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_D2M() const;
+
   protected :
     /// Purely virtual function. Compute omega in one octant.
     virtual void Build_octant() = 0;
@@ -52,5 +71,30 @@ class QUADRATURE
     /// Vector of omega for each direction.
     vector<Teuchos::SerialDenseVector<int,double> > omega;
 };
+
+inline unsigned int QUADRATURE::Get_n_dir() const
+{
+  return n_dir;
+}
+
+inline unsigned int QUADRATURE::Get_n_mom() const
+{
+  return n_mom;
+}
+
+inline Teuchos::SerialDenseVector<int,double> const* const QUADRATURE::Get_omega(unsigned int idir) const
+{
+  return &omega[idir];
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const QUADRATURE::Get_M2D() const
+{
+  return &M2D;
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const QUADRATURE::Get_D2M() const
+{
+  return &D2M;
+}
 
 #endif

@@ -3,33 +3,61 @@
 
 #include <vector>
 #include "Teuchos_SerialDenseMatrix.hpp"
-#include "CELL.hh"
+//#include "CELL.hh"
 
 using namespace std;
 
 typedef vector<double> d_vector;
 
+class CELL;
 /**
  * Define the API for all the finite element discretizations.
  */ 
-
 class FINITE_ELEMENT
 {
   public :
-    FINITE_ELEMENT(d_vector const &cell_x,d_vector const &cell_y) : 
+    FINITE_ELEMENT(d_vector const &cell_x,d_vector const &cell_y) :
       x(cell_x),y(cell_y){};
 
     /// Purely virtual function to build the 1-dimensional finite elements.
     virtual void Build_fe_1d() = 0;
 
+    /// Purely virtual function to build the upwinding matrices.
+    virtual void Build_upwind_matrices(CELL* cell,vector<CELL*> const &mesh) = 0;
+
     /// Purely virtual function to build the 2-dimensional finite elements.
     virtual void Build_fe_2d() = 0;
 
-    /// Purely virtual function to build the upwinding matrices.
-    virtual void Build_upwind_matrices(CELL &cell,vector<CELL> const &mesh) = 0;
-
     /// Return the number of degrees of freedom for the cell.
     unsigned int Get_dof_per_cell() const;
+
+    /// Return a pointer to the #downwind matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_downwind_matrix(
+        unsigned int i) const;
+
+    /// Return a pointer the #upwind matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_upwind_matrix(
+        unsigned int i) const;
+
+    /// Return a pointer to #edge_deln_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_edge_deln_matrix(
+        unsigned int i,unsigned int j) const;
+
+    /// Return a pointer to #coupling_edge_deln_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_coupling_edge_deln_matrix(
+        unsigned int i,unsigned int j) const;
+
+    /// Return a pointer to #mass_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_mass_matrix() const;
+
+    /// Return a pointer to #x_grad_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_x_grad_matrix() const;
+
+    /// Return a pointer to #y_grad_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_y_grad_matrix() const;
+
+    /// Return a pointer to #stiffness_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_stiffness_matrix() const;
 
   protected :
     /// Number of degrees of freedom for the cell.
@@ -63,6 +91,50 @@ class FINITE_ELEMENT
 inline unsigned int FINITE_ELEMENT::Get_dof_per_cell() const
 {
   return dof_per_cell;
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_downwind_matrix(
+    unsigned int i) const
+{
+  return &downwind[i];
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_upwind_matrix(
+    unsigned int i) const
+{
+  return &upwind[i];
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_edge_deln_matrix(
+    unsigned int i,unsigned int j) const
+{
+  return &edge_deln_matrix[i][j];
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_coupling_edge_deln_matrix(
+    unsigned int i,unsigned int j) const
+{
+  return &coupling_edge_deln_matrix[i][j];
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_mass_matrix() const
+{
+  return &mass_matrix;
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_x_grad_matrix() const
+{
+  return &x_grad_matrix;
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_y_grad_matrix() const
+{
+  return &y_grad_matrix;
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_stiffness_matrix() const
+{
+  return &stiffness_matrix;
 }
 
 #endif

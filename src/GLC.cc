@@ -22,7 +22,7 @@ void GLC::Build_octant()
     // the table and returns the result.
     gsl_integration_glfixed_point(-1.,1.,i,&cos_theta[i-sn/2],&polar_weight[i-sn/2],
        table);
-    sin_theta[i] = sqrt(1.-pow(cos_theta[i],2));
+    sin_theta[i-sn/2] = sqrt(1.-pow(cos_theta[i-sn/2],2));
   }
 
   // Build the Chebyshev quadrature

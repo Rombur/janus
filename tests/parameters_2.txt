@@ -1,0 +1,16 @@
+GMRES 1e-10 270
+true
+true
+true
+true
+true
+LS
+true
+4
+4
+PWLD
+1.2 3.2 1.3
+-1. 0. -1. 0.
+11.5 1.
+27. 2.
+40.5 3.

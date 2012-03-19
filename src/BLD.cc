@@ -97,7 +97,7 @@ void BLD::Build_fe_1d()
   edge_deln_matrix[3][0](3,3) = -2.*v_ratio;
 }
 
-void BLD::Build_upwind_matrices(CELL &cell,vector<CELL> const &mesh)
+void BLD::Build_upwind_matrices(CELL* cell,vector<CELL*> const &mesh)
 {
   double h_ratio(delta_x/(6.*delta_y));
   double v_ratio(delta_y/(6.*delta_x));

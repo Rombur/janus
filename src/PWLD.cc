@@ -71,7 +71,7 @@ void PWLD::Build_fe_1d()
     length = sqrt(pow(x1_x0,2)+pow(y1_y0,2));
     jacobian = fabs(x1_x0*y2_y0-y1_y0*x2_x0);
     for (unsigned int j=0; j<2; ++j)
-      for (unsigned int k=0; k<2; ++j)
+      for (unsigned int k=0; k<2; ++k)
         tmp_array_0[j][k] = length/6.*array_0[j][k];
     for (unsigned int j=0; j<3; ++j)
       for (unsigned int k=0; k<3; ++k)
@@ -81,7 +81,6 @@ void PWLD::Build_fe_1d()
         tmp_array_2[j][k] = length/(2.*jacobian)*(-x2_x0*array_1[j][k]+
             x1_x0*array_2[j][k]);
       }
-
     edge_mass_matrix.push_back(tmp_array_0);
     deln_matrix[i][0] = tmp_array_1;
     deln_matrix[i][1] = tmp_array_2;
@@ -117,11 +116,11 @@ void PWLD::Build_fe_1d()
   }
 }
 
-void PWLD::Build_upwind_matrices(CELL &cell,vector<CELL> const &mesh)
+void PWLD::Build_upwind_matrices(CELL* cell,vector<CELL*> const &mesh)
 {
   const unsigned int dim(2);
-  vector<EDGE*>::iterator cell_edge(cell.Get_cell_edges_begin());
-  vector<EDGE*>::const_iterator cell_edges_end(cell.Get_cell_edges_end());
+  vector<EDGE*>::iterator cell_edge(cell->Get_cell_edges_begin());
+  vector<EDGE*>::const_iterator cell_edges_end(cell->Get_cell_edges_end());
 
   for (unsigned int i=0; cell_edge<cell_edges_end; ++cell_edge,++i)
   {
@@ -132,7 +131,7 @@ void PWLD::Build_upwind_matrices(CELL &cell,vector<CELL> const &mesh)
       unsigned int upwind_edge_lid(0);
       unsigned int upwind_cell_id(0);
       unsigned int upwind_dof_per_cell(0);
-      if (cell.Get_id()==(*cell_edge)->Get_cell_index(0))
+      if (cell->Get_id()==(*cell_edge)->Get_cell_index(0))
       {
         edge_lid = (*cell_edge)->Get_lid(0);
         upwind_edge_lid = (*cell_edge)->Get_lid(1);
@@ -146,7 +145,7 @@ void PWLD::Build_upwind_matrices(CELL &cell,vector<CELL> const &mesh)
       }
       // Read right to left: const pointer to a const FINITE_ELEMENT (pointer
       // and the value cannot be changed)
-      FINITE_ELEMENT const* const upwind_fe(mesh[upwind_cell_id].Get_fe());
+      FINITE_ELEMENT const* const upwind_fe(mesh[upwind_cell_id]->Get_fe());
       upwind_dof_per_cell = upwind_fe->Get_dof_per_cell();
       // Build the upwind matrix associated to the edge
       upwind[i].shape(dof_per_cell,upwind_dof_per_cell);
@@ -293,10 +292,10 @@ void PWLD::Build_fe_2d()
 
       for (unsigned int l=0; l<dof_per_cell; ++l)
       {
-        mass_matrix(i,j) += square_ratio*mass[2][2];
-        x_grad_matrix(i,j) += square_ratio*x_grad[2][2];
-        y_grad_matrix(i,j) += square_ratio*y_grad[2][2];
-        stiffness_matrix(i,j) += square_ratio*stiffness[2][2];
+        mass_matrix(k,l) += square_ratio*mass[2][2];
+        x_grad_matrix(k,l) += square_ratio*x_grad[2][2];
+        y_grad_matrix(k,l) += square_ratio*y_grad[2][2];
+        stiffness_matrix(k,l) += square_ratio*stiffness[2][2];
       }
     }
   }

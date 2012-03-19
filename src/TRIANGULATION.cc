@@ -32,6 +32,8 @@ void TRIANGULATION::Read_geometry()
     // Read the number of cells in x and y
     geometry_file>>n_x>>n_y;
     n_cells = n_x*n_y;
+    mat_id.resize(n_cells);
+    src_id.resize(n_cells);
     // Fill n_vertices with 4 since all the cells are rectangular.
     n_vertices.resize(n_cells,4);
     // Read the abscissae
@@ -87,9 +89,10 @@ void TRIANGULATION::Read_geometry()
       rectangle[3][1] = y[y_pos+1];
       // Add the cell to the grid
       grid[i] = rectangle;
+      ++x_pos;
     }
   }
-  else
+  else 
   {
     // Read the number of cells
     geometry_file>>n_cells;
@@ -131,6 +134,7 @@ void TRIANGULATION::Read_geometry()
 void TRIANGULATION::Build_edges()
 {
   unsigned int edge_gid(0);
+  cell_to_edge_gid.resize(n_cells);
   // Loop over the cells.
   for (unsigned int i=0; i<n_cells; ++i)
   {
@@ -156,6 +160,7 @@ void TRIANGULATION::Build_edges()
         if (edges[j].Has_same_coord(vertex_0,vertex_1))
         {
           edges[j].Set_cell_index(1,i);
+          cell_to_edge_gid[i].push_back(edges[j].Get_gid());
           edge_exist = true;
           break;
         }
@@ -164,6 +169,8 @@ void TRIANGULATION::Build_edges()
         EDGE_TYPE edge_type(Get_edge_type(vertex_0,vertex_1));
         edges.push_back(EDGE(edge_type,edge_gid,vertex_0,vertex_1));
         edges[n_edges].Set_cell_index(0,i);
+        cell_to_edge_gid[i].push_back(edge_gid);
+        ++edge_gid;
       }
     }
   }

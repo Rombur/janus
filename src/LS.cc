@@ -665,7 +665,7 @@ void LS::Compute_omega(d_vector const &direction)
 
   for (unsigned int j=0; j<size; ++j)
   {
-    for (unsigned int i=0; i<size-j; ++j)
+    for (unsigned int i=0; i<size-j; ++i)
     {
       omega[offset+i](0) = direction[size-1-j-i];
       omega[offset+i](1) = direction[i];

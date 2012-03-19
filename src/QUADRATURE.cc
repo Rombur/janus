@@ -11,10 +11,18 @@ QUADRATURE::QUADRATURE(unsigned int sn_,unsigned int L_max_,bool galerkin_) :
   if (galerkin==true)
     n_mom = n_dir;
   else 
-  {
     n_mom = (L_max+1)*(L_max+2)/2;
-    weight.size(n_dir);
-  }
+  weight.size(n_dir);
+  M2D.shape(n_dir,n_mom);
+}
+
+Teuchos::SerialDenseVector<int,double> QUADRATURE::Get_omega_2d(unsigned int idir) const
+{
+  Teuchos::SerialDenseVector<int,double> omega_2d(2);
+  omega_2d(0) = omega[idir](0);
+  omega_2d(1) = omega[idir](1);
+
+  return omega_2d;
 }
 
 void QUADRATURE::Build_quadrature()
@@ -34,7 +42,7 @@ void QUADRATURE::Build_quadrature()
     int info;
     int ipiv[n_dir];
     Teuchos::LAPACK<int,double> lapack;
-    Teuchos::SerialDenseMatrix<int,double> work;
+    Teuchos::SerialDenseMatrix<int,double> work(n_dir,n_dir);
     D2M = M2D;
     
     // Compute an LU factorization of a general M-by-N matrix using partial
@@ -63,30 +71,28 @@ void QUADRATURE::Deploy_octant()
 {
   // Assume the quadrature is only for 2D
   const unsigned int n_dir_octant(n_dir/4);
-  for (unsigned int i=0; i<4; ++i)
+  for (unsigned int i=1; i<4; ++i)
   {
-    unsigned int offset(i*n_dir_octant);
-    if (i!=0)
+    const unsigned int offset(i*n_dir_octant);
+    for (unsigned int j=0; j<n_dir_octant; ++j)
     {
-      for (unsigned int j=0; j<n_dir_octant; ++j)
+      // Copy omega and weight
+      if (galerkin==false)
+        weight(j+offset) = weight(j);
+      omega[j+offset](2) = omega[j](2);
+      switch(i)
       {
-        // Copy omega and weight
-        if (galerkin==false)
-          weight(i+offset) = weight[i];
-        omega[i+offset](2) = omega[i](2);
-        switch(i)
-        {
-          case 1:
-            omega[i+offset](0) = omega[i](0);
-            omega[i+offset](1) = -omega[i](1);
-            break;
-          case 2 :
-            omega[i+offset](0) = -omega[i](0);
-            omega[i+offset](1) = -omega[i](1);
-            break;
-          case 3 :
-            omega[i+offset](0) = -omega[i](0);
-        }
+        case 1:
+          omega[j+offset](0) = omega[j](0);
+          omega[j+offset](1) = -omega[j](1);
+          break;
+        case 2 :
+          omega[j+offset](0) = -omega[j](0);
+          omega[j+offset](1) = -omega[j](1);
+          break;
+        case 3 :
+          omega[j+offset](0) = -omega[j](0);
+          omega[j+offset](1) = omega[j](1);
       }
     }
   }
@@ -94,8 +100,8 @@ void QUADRATURE::Deploy_octant()
   {
     double sum_weight(0.);
     for (unsigned int i=0; i<n_dir_octant; ++i)
-      sum_weight += 4.*weight(i);
-    weight *= 1./sum_weight; 
+      sum_weight += weight(i);
+    weight *= 0.25/sum_weight; 
   }
 }
 
@@ -118,7 +124,7 @@ void QUADRATURE::Compute_harmonics()
   {
     for (unsigned int m=0; m<l+1; ++m)
     {
-      for (unsigned int idir; idir<n_dir; ++idir)
+      for (unsigned int idir=0; idir<n_dir; ++idir)
       {
         // Compute the normalized associated Legendre polynomail using GSL:
         // (-1)^m sqrt((2l+1)/4pi (l-m)!/(l+m)!) P_l^m(cos(theta))

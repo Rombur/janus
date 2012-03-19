@@ -5,13 +5,14 @@
 #include <vector>
 #include "gsl_math.h"
 #include "EDGE.hh"
+#include "FINITE_ELEMENT.hh"
 
 using namespace std;
 
 typedef vector<unsigned int> ui_vector;
 typedef vector<double> d_vector;
 
-class FINITE_ELEMENT;
+//class FINITE_ELEMENT;
 /**
  *  Cell contains all the data which define a cell. If the number of edges is
  *  even, the orthogonal length is 2 X apothem (inradius) => assume
@@ -24,17 +25,42 @@ class CELL
 {
   public :
     CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
-        unsigned int last_dof,double source,double sigma_t,d_vector sigma_s,
-        vector<EDGE*> edges, FINITE_ELEMENT* fe);
+        unsigned int last_dof,double source,d_vector sigma_t,vector<d_vector> sigma_s,
+        vector<EDGE*> edges,FINITE_ELEMENT* fe);
+
+    ~CELL();
 
     /// Return the cell id.
     unsigned int Get_id() const;
+
+    /// Return the number edges/vertices of the cell.
+    unsigned int Get_n_edges() const;
+
+    /// Return the index of the "first" basis function associated to the cell.
+    unsigned int Get_first_dof() const;
+
+    /// Return the index of the "last" basis function associated to the cell
+    ///+1.
+    unsigned int Get_last_dof() const;
+
+    /// Return the intensity of the source in the cell.
+    double Get_source() const;
+
+    /// Return the \f$\Sigma_t\f$ in the cell for a given angular level.
+    double Get_sigma_t(unsigned int lvl) const;
+
+    /// Return the \f$\Sigma_s\f$ in the cell for a given angular level and a
+    /// given moment.
+    double Get_sigma_s(unsigned int lvl,unsigned int mom) const;
 
     /// Return the begin iterator of the cell_edge vector.
     vector<EDGE*>::iterator Get_cell_edges_begin();
 
     /// Return the end iterator of the cell_edge vector.
     vector<EDGE*>::iterator Get_cell_edges_end();
+
+    /// Return a pointer to fe.
+    FINITE_ELEMENT* Get_mutable_fe();
 
     /// Return a const pointer to the constant fe (pointer and object are
     /// constant);
@@ -49,7 +75,7 @@ class CELL
     void Compute_area_and_perimeter();
 
     /// Return true if the two vertices are the same.
-    bool Is_same_vertex(d_vector const &v1,d_vector const &v2);
+    bool Is_same_vertex(d_vector const* v1,d_vector const* v2) const;
 
     /// Cell id.
     unsigned int id;
@@ -67,21 +93,53 @@ class CELL
     double source;
     /// Diffusion coefficient in the cell.
     double D;
-    /// Total cross section in the cell.
-    double sigma_t;
-    /// Scattering cross section in the cell.
-    d_vector sigma_s;
+    /// Total cross section in the cell. sigma_t is a vector because of the
+    /// angular multigrid.
+    d_vector sigma_t;
+    /// Scattering cross section in the cell. sigma_s is a vector of vector
+    /// because of the angular multigrid.
+    vector<d_vector> sigma_s;
     /// Ortogonal length of the cell associated to each edge.
     d_vector orthogonal_length;
     /// Vector of the pointer to edges which compose the cell.
     vector<EDGE*> cell_edges;
-    /// Pointer to the finite element associated to the cell.
+    /// Finite elements associated to the cell.
     FINITE_ELEMENT* fe;
 };
 
 inline unsigned int CELL::Get_id() const
 {
   return id;
+}
+
+inline unsigned int CELL::Get_n_edges() const
+{
+  return n_vertices;
+}
+
+inline unsigned int CELL::Get_first_dof() const
+{
+  return first_dof;
+}
+
+inline unsigned int CELL::Get_last_dof() const
+{
+  return last_dof;
+}
+
+inline double CELL::Get_source() const
+{
+  return source;
+}
+
+inline double CELL::Get_sigma_t(unsigned int lvl) const
+{
+  return sigma_t[lvl];
+}
+
+inline double CELL::Get_sigma_s(unsigned int lvl,unsigned int mom) const
+{
+  return sigma_s[lvl][mom];
 }
 
 inline vector<EDGE*>::iterator CELL::Get_cell_edges_begin() 
@@ -92,6 +150,11 @@ inline vector<EDGE*>::iterator CELL::Get_cell_edges_begin()
 inline vector<EDGE*>::iterator CELL::Get_cell_edges_end()
 {
   return cell_edges.begin();
+}
+
+inline FINITE_ELEMENT* CELL::Get_mutable_fe()
+{
+  return fe;
 }
 
 inline FINITE_ELEMENT const* const CELL::Get_fe() const

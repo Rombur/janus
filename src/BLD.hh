@@ -23,7 +23,7 @@ class BLD : public FINITE_ELEMENT
     void Build_fe_1d();
 
     /// Build the upwindind matrices. cell and mesh are not used in BLD.
-    void Build_upwind_matrices(CELL &cell,vector<CELL> const &mesh);
+    void Build_upwind_matrices(CELL* cell,vector<CELL*> const &mesh);
 
     /// Build the 2-dimensional finite elements (cell).
     void Build_fe_2d();

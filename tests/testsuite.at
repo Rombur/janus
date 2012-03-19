@@ -1,0 +1,23 @@
+m4_define([AT_PACKAGE_STRING],[janus])
+m4_define([AT_PACKAGE_BUGREPORT],[bruno.turcksin@gmail.com])
+
+AT_INIT([janus testsuite])
+AT_COLOR_TESTS
+AT_SETUP([TRIANGULATION polygon])
+AT_CHECK([triangulation_pol_test],[],[])
+AT_CLEANUP
+AT_SETUP([TRIANGULATION rectangle])
+AT_CHECK([triangulation_rec_test],[],[])
+AT_CLEANUP
+AT_SETUP([PARAMETERS test 1])
+AT_CHECK([parameters_test_1],[],[])
+AT_CLEANUP
+AT_SETUP([PARAMETERS test 2])
+AT_CHECK([parameters_test_2],[],[])
+AT_CLEANUP
+AT_SETUP([QUADRATURE LS])
+AT_CHECK([ls_test],[],[])
+AT_CLEANUP
+AT_SETUP([QUADRATURE GLC])
+AT_CHECK([glc_test],[],[])
+AT_CLEANUP
