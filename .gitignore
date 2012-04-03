@@ -41,3 +41,5 @@ parameters_test_2
 pwld_test
 glc_test
 ls_test
+*.inp
+cell_test

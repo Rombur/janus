@@ -37,6 +37,7 @@ class TRIANGLE(object) :
     self.output_silo = open('silo_'+output_filename+'.txt','w')
 
     self.mesh = []
+    self.used_triangles = set()
 
 #----------------------------------------------------------------------------#
 
@@ -92,9 +93,8 @@ class TRIANGLE(object) :
 #----------------------------------------------------------------------------#
 
   def Generate_polygonal_mesh(self) :
-    """Generate the polygonal mesh."""
+    """Generate a polygonal mesh."""
 
-    self.used_triangles = set()
     while len(self.available_vertices)>0 :
 # Take the next available vertex
       triangle_ids = self.vertices[self.available_vertices[0]][0]
@@ -357,3 +357,67 @@ class TRIANGLE(object) :
     print '-octogons: ',repartion[5]
     print 'Initial number of degrees of freedom: ',3*self.n_triangles
     print 'Number of degrees of freedom: ',n_dof
+
+#----------------------------------------------------------------------------#
+
+  def Generate_quadrilateral_mesh(self) :
+    """Generate a polygonal mesh."""
+
+    for triangle in self.triangles :
+      mat_id = triangle[1]%100
+      src_id = (triangle[1]-mat_id)/100
+      vertex_1 = self.vertices[int(triangle[0][0])][1]
+      vertex_2 = self.vertices[int(triangle[0][1])][1]
+      vertex_3 = self.vertices[int(triangle[0][2])][1]
+      barycenter,mid_1,mid_2,mid_3 = self.Compute_barycenter_and_midpoints(triangle)
+# Build the first cell in the triangle
+      vertices = []
+      vertices.append(vertex_1)
+      vertices.append(mid_1)
+      vertices.append(barycenter)
+      vertices.append(mid_3)
+      cell = [4,vertices,mat_id,src_id]
+      self.mesh.append(cell)
+      self.Write_cell(cell)
+# Build the second cell in the triangle
+      vertices = []
+      vertices.append(vertex_2)
+      vertices.append(mid_2)
+      vertices.append(barycenter)
+      vertices.append(mid_1)
+      cell = [4,vertices,mat_id,src_id]
+      self.mesh.append(cell)
+      self.Write_cell(cell)
+# Build the third cell in the triangle
+      vertices = []
+      vertices.append(vertex_3)
+      vertices.append(mid_3)
+      vertices.append(barycenter)
+      vertices.append(mid_2)
+      cell = [4,vertices,mat_id,src_id]
+      self.mesh.append(cell)
+      self.Write_cell(cell)
+
+# Close output file
+    self.output_file.close()
+
+# Create a file readable by apollo
+    self.Create_apollo_file()
+
+#----------------------------------------------------------------------------#
+
+  def Compute_barycenter_and_midpoints(self,triangle) :
+    """Compute the coordinates of the barycenter and of the midpoints of each
+    edge."""
+
+    vertex_1 = self.vertices[int(triangle[0][0])][1]
+    vertex_2 = self.vertices[int(triangle[0][1])][1]
+    vertex_3 = self.vertices[int(triangle[0][2])][1]
+
+    barycenter = [(vertex_1[0]+vertex_2[0]+vertex_3[0])/3.,\
+        (vertex_1[1]+vertex_2[1]+vertex_3[1])/3.]
+    midpoint_1 = [(vertex_1[0]+vertex_2[0])/2.,(vertex_1[1]+vertex_2[1])/2.] 
+    midpoint_2 = [(vertex_2[0]+vertex_3[0])/2.,(vertex_2[1]+vertex_3[1])/2.] 
+    midpoint_3 = [(vertex_1[0]+vertex_3[0])/2.,(vertex_1[1]+vertex_3[1])/2.] 
+
+    return barycenter,midpoint_1,midpoint_2,midpoint_3

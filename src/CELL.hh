@@ -46,13 +46,20 @@ class CELL
     /// Return the intensity of the source in the cell.
     double Get_source() const;
 
+    /// Return the diffusion coefficient in the cell.
+    double Get_diffusion_coefficient() const;
+
     /// Return the \f$\Sigma_t\f$ in the cell for a given angular level.
     double Get_sigma_t(unsigned int lvl) const;
 
     /// Return the \f$\Sigma_s\f$ in the cell for a given angular level and a
     /// given moment.
     double Get_sigma_s(unsigned int lvl,unsigned int mom) const;
-
+          
+    /// Return the orthogonal length of the cell associated to the ith edge of
+    /// the cell.
+    double Get_orthogonal_length(unsigned int i);
+    
     /// Return the begin iterator of the cell_edge vector.
     vector<EDGE*>::iterator Get_cell_edges_begin();
 
@@ -132,6 +139,11 @@ inline double CELL::Get_source() const
   return source;
 }
 
+inline double CELL::Get_diffusion_coefficient() const
+{
+  return D;
+}
+
 inline double CELL::Get_sigma_t(unsigned int lvl) const
 {
   return sigma_t[lvl];
@@ -141,6 +153,10 @@ inline double CELL::Get_sigma_s(unsigned int lvl,unsigned int mom) const
 {
   return sigma_s[lvl][mom];
 }
+inline double CELL::Get_orthogonal_length(unsigned int i)
+{
+  return orthogonal_length[i];
+}
 
 inline vector<EDGE*>::iterator CELL::Get_cell_edges_begin() 
 {
@@ -149,7 +165,7 @@ inline vector<EDGE*>::iterator CELL::Get_cell_edges_begin()
 
 inline vector<EDGE*>::iterator CELL::Get_cell_edges_end()
 {
-  return cell_edges.begin();
+  return cell_edges.end();
 }
 
 inline FINITE_ELEMENT* CELL::Get_mutable_fe()

@@ -18,7 +18,7 @@
 using namespace std;
 
 typedef list<unsigned int> ui_list;
-typedef map<unsigned int> ui_map;
+typedef map<unsigned int,unsigned int> ui_map;
 typedef set<unsigned int> ui_set;
 typedef vector<unsigned int> ui_vector;
 
@@ -63,20 +63,27 @@ class DOF_HANDLER
 
     /// Return the index of first basis function of a "reflective" cell given 
     /// the cell id.
-    unsigned int Get_saf_map(unsigned int cell_id) const;
+    unsigned int Get_saf_map(unsigned int cell_id);
 
     /// Return the sweep ordering for a given quadrature and a given
     /// direction.
-    ui_vector* Get_sweep_order(unsigned int q,unsigned int direction) const;
+    ui_vector const* const Get_sweep_order(unsigned int q,unsigned int direction) 
+      const;
 
     /// Return a pointer to a cell.
-    CELL* Get_cell(unsigned int i) const;
+    CELL* Get_cell(unsigned int i);
 
     /// Return the begin iterator of the mesh vector.
     vector<CELL*>::iterator Get_mesh_begin();
 
     /// Return the end iterator of the mesh vector.
     vector<CELL*>::iterator Get_mesh_end();
+
+    /// Get an iterator to the beginning of #edges.
+    vector<EDGE>::iterator Get_edges_begin();
+
+    /// Get an iterator to the end of #edges.
+    vector<EDGE>::iterator Get_edges_end();
 
   private :
     /// Compute the most normal directions among the quadrature.
@@ -147,18 +154,18 @@ inline unsigned int DOF_HANDLER::Get_n_cells() const
   return triangulation->Get_n_cells();
 }
 
-inline unsigned int DOF_HANDLER::Get_saf_map(unsigned int cell_id) const
+inline unsigned int DOF_HANDLER::Get_saf_map(unsigned int cell_id) 
 {
   return saf_map[cell_id];
 }
 
-inline ui_vector* DOF_HANDLER::Get_sweep_order(unsigned int q,
+inline ui_vector const* const DOF_HANDLER::Get_sweep_order(unsigned int q,
     unsigned int direction) const
 {
   return &sweep_order[q][direction];
 }
     
-inline CELL* DOF_HANDLER::Get_cell(unsigned int i) const
+inline CELL* DOF_HANDLER::Get_cell(unsigned int i) 
 {
   return mesh[i];
 }
@@ -171,6 +178,16 @@ inline vector<CELL*>::iterator DOF_HANDLER::Get_mesh_begin()
 inline vector<CELL*>::iterator DOF_HANDLER::Get_mesh_end() 
 {
   return mesh.end();
+}
+
+inline vector<EDGE>::iterator DOF_HANDLER::Get_edges_begin()
+{
+  return triangulation->Get_edges_begin();
+}
+
+inline vector<EDGE>::iterator DOF_HANDLER::Get_edges_end()
+{
+  return triangulation->Get_edges_end();
 }
 
 #endif

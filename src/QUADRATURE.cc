@@ -58,7 +58,7 @@ void QUADRATURE::Build_quadrature()
     Teuchos::BLAS<int,double> blas;
     Teuchos::SerialDenseMatrix<int,double> weight_matrix(n_dir,n_dir);
     for (unsigned int i=0; i<n_dir; ++i)
-      weight_matrix(i,i) = weight(i);
+      weight_matrix(i,i) = 4.*M_PI*weight(i);
     D2M.shape(n_mom,n_dir);
 
     blas.GEMM(Teuchos::TRANS,Teuchos::NO_TRANS,n_mom,n_dir,n_dir,1.,

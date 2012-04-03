@@ -8,8 +8,8 @@ int main(int argc,char** argv)
 {
   const unsigned int n_cells(4);
   const unsigned int n_vertices(4);
-  const unsigned int n_mat(4);
-  const unsigned int n_src(4);
+  const unsigned int n_mat(3);
+  const unsigned int n_src(3);
   const double x_0(0.);
   const double x_1(1.);
   const double x_2(2.);

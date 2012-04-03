@@ -2,12 +2,14 @@
 #define _TRIANGULATION_HH_
 
 #include <fstream>
+#include <set>
 #include <string>
 #include <vector>
 #include "EDGE.hh"
 
 using namespace std;
 
+typedef set<unsigned int> ui_set;
 typedef vector<unsigned int> ui_vector;
 typedef vector<double> d_vector;
 
@@ -112,19 +114,9 @@ inline unsigned int TRIANGULATION::Get_mat_id(unsigned int i) const
   return mat_id[i];
 }
 
-inline unsigned int TRIANGULATION::Get_n_materials() const
-{
-  return mat_id.size();
-}
-
 inline unsigned int TRIANGULATION::Get_src_id(unsigned int i) const
 {
   return src_id[i];
-}
-
-inline unsigned int TRIANGULATION::Get_n_sources() const
-{
-  return src_id.size();
 }
 
 inline double TRIANGULATION::Get_x_coord(unsigned int i,unsigned int j) const

@@ -44,7 +44,7 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
         n_sf_per_dir += fe->Get_dof_per_cell();
         cell_saf = true;
       }
-      cell_edges[i] = edge;
+      cell_edges[j] = edge;
     }
     if (cell_saf==true)
       saf_map[i] = start_dof;
@@ -116,7 +116,7 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
         unsigned int index(0);
         EDGE* test_edge(triangulation->Get_edge(*(incoming_edges.begin())));
         CELL* cell;
-        if (cells_done.count(test_edge->Get_cell_index(0))==0)
+        if (cells_done.count(test_edge->Get_cell_index(0))!=0)
         {
           cell = mesh[test_edge->Get_cell_index(1)];
           index = 1;
@@ -135,7 +135,11 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
           if ((*cell_edge)->Get_gid()!=test_edge->Get_gid())
           {
             // Check if the edge is outgoing
-            if (omega.dot(*((*cell_edge)->Get_external_normal(index)))>=0.)
+            unsigned int index_2(0);
+            if ((*cell_edge)->Get_cell_index(index_2)!=
+                test_edge->Get_cell_index(index))
+              index_2 = 1;
+            if (omega.dot(*((*cell_edge)->Get_external_normal(index_2)))>=0.)
               outgoing_tests[pos] = true;
             else
               if (count(incoming_edges.begin(),incoming_edges.end(),
@@ -241,7 +245,7 @@ void DOF_HANDLER::Compute_external_normal()
     Teuchos::SerialDenseVector<int,double> edge_vector(2);
     Teuchos::SerialDenseVector<int,double> n_edge(2);
     n_edge(0) = edge->Get_v1_y()-edge->Get_v0_y();
-    n_edge(1) = edge->Get_v1_x()-edge->Get_v0_x();
+    n_edge(1) = -edge->Get_v1_x()+edge->Get_v0_x();
     n_edge *= 1./n_edge.normFrobenius();
     // Compute the sign, assume that the polygon is convex
     vector<EDGE*>::iterator cell_edge(
@@ -262,6 +266,7 @@ void DOF_HANDLER::Compute_external_normal()
           break;
         }
         else
+        {
           if ((((*cell_edge)->Get_v1_x()==edge->Get_v1_x()) &&
               ((*cell_edge)->Get_v1_y()==edge->Get_v1_y())) ||
               (((*cell_edge)->Get_v1_x()==edge->Get_v0_x()) &&
@@ -271,6 +276,7 @@ void DOF_HANDLER::Compute_external_normal()
             edge_vector(1) = (*cell_edge)->Get_v0_y()-(*cell_edge)->Get_v1_y();
             break;
           }
+        }
       }
     }
     if (n_edge.dot(edge_vector)>0.)

@@ -83,6 +83,9 @@ class EDGE
     /// Get the normal in the ith component of #external_normal.
     Teuchos::SerialDenseVector<int,double> const* const Get_external_normal(unsigned int i) const;
 
+    /// Get the jth component of the normal in the ith component of #external_normal.
+    double Get_external_normal_component(unsigned int i,unsigned int j) const;
+
   private :
     /// Flag to know if the edge is inside the medium, on the bottom boundary, on the
     /// the right boundary, on the top boundary or on the left boundary.
@@ -190,6 +193,11 @@ inline void EDGE::Set_external_normal(unsigned int i,
 inline Teuchos::SerialDenseVector<int,double> const* const EDGE::Get_external_normal(unsigned int i) const
 {
   return &external_normal[i];
+}
+
+inline double EDGE::Get_external_normal_component(unsigned int i,unsigned int j) const
+{
+  return external_normal[i](j);
 }
 
 #endif

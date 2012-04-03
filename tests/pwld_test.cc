@@ -14,8 +14,8 @@ int main(int argc,char** argv)
   unsigned int dof_per_cell(4);
   double m_r(1./96.);
   double g_r(1./12.);
-  double x0,x1,x2,y0,y1,y2,x1_x0,y2_y0,y1_y0,x2_x0;
-  double a_00,a_01,a_01,a_02,a_11,a_22,jacobian;
+  double x0,x1,x2,y0,y1,y2,x1_x0,y2_y0,y1_y0,x2_x0,y2_y1,x2_x1;
+  double a_00,a_01,a_02,a_11,a_12,a_22,jacobian;
   d_vector cell_x(4,0.);
   d_vector cell_y(4,0.);
   vector<d_vector> mass_matrix(4,d_vector(4,0.));
@@ -39,24 +39,26 @@ int main(int argc,char** argv)
   y2 = (cell_y[0]+cell_y[1]+cell_y[2]+cell_y[3])/4.;
   x1_x0 = x1-x0;
   x2_x0 = x2-x0;
+  x2_x1 = x2-x1;
   y2_y0 = y2-y0;
   y1_y0 = y1-y0;
-  a_00(0.5*(pow(y2_y1,2)+pow(x2_x1,2)));
-  a_01(-0.5*(y2_y0*y2_y1+x2_x0*x2_x1)); 
-  a_02(0.5*(y1_y0*y2_y1+x1_x0*x2_x1));  
-  a_11(0.5*(pow(y2_y0,2)+pow(x2_x0,2)));
-  a_12(-0.5*(y2_y0*y1_y0+x2_x0*x1_x0)); 
-  a_22(0.5*(pow(y1_y0,2)+pow(x1_x0,2)));
+  y2_y1 = y2-y1;
+  a_00 = 0.5*(pow(y2_y1,2)+pow(x2_x1,2));
+  a_01 = -0.5*(y2_y0*y2_y1+x2_x0*x2_x1); 
+  a_02 = 0.5*(y1_y0*y2_y1+x1_x0*x2_x1);  
+  a_11 = 0.5*(pow(y2_y0,2)+pow(x2_x0,2));
+  a_12 = -0.5*(y2_y0*y1_y0+x2_x0*x1_x0); 
+  a_22 = 0.5*(pow(y1_y0,2)+pow(x1_x0,2));
   jacobian = fabs(x1_x0*y2_y0-y1_y0*x2_x0);
-  stiffness[0][0] = a_00/jacobian;
-  stiffness[0][1] = a_01/jacobian;
-  stiffness[0][2] = a_02/jacobian;
-  stiffness[1][0] = a_01/jacobian;
-  stiffness[1][1] = a_11/jacobian;
-  stiffness[1][2] = a_12/jacobian;
-  stiffness[2][0] = a_02/jacobian;
-  stiffness[2][1] = a_12/jacobian;
-  stiffness[2][2] = a_22/jacobian;
+  stiffness_matrix[0][0] = a_00/jacobian;
+  stiffness_matrix[0][1] = a_01/jacobian;
+  stiffness_matrix[0][2] = a_02/jacobian;
+  stiffness_matrix[1][0] = a_01/jacobian;
+  stiffness_matrix[1][1] = a_11/jacobian;
+  stiffness_matrix[1][2] = a_12/jacobian;
+  stiffness_matrix[2][0] = a_02/jacobian;
+  stiffness_matrix[2][1] = a_12/jacobian;
+  stiffness_matrix[2][2] = a_22/jacobian;
   PWLD fe(cell_x,cell_y);
   mass_matrix[0][0] = 11.*m_r;
   mass_matrix[0][1] = 5.*m_r;
@@ -111,12 +113,9 @@ int main(int argc,char** argv)
   stiffness_matrix[0][0] += a_00 + 1./4.*a_02 + 1./4.*a_02 + 1./16.*a_22;
   stiffness_matrix[0][1] += a_01 + 1./4.*a_02 + 1./4.*a_12 + 1./16.*a_22;
 
-  cout<<"before fe_1d"<<endl;
   fe.Build_fe_1d();
   //fe.Build_upwind_matrices(cell,mesh);
-  cout<<"before fe_2d"<<endl;
   fe.Build_fe_2d();
-  cout<<"after fe_2d"<<endl;
 
   // Check the number of degrees of freedom per cell
   assert(dof_per_cell==fe.Get_dof_per_cell());

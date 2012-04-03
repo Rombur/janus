@@ -21,3 +21,6 @@ AT_CLEANUP
 AT_SETUP([QUADRATURE GLC])
 AT_CHECK([glc_test],[],[])
 AT_CLEANUP
+AT_SETUP([CELL])
+AT_CHECK([cell_test],[],[])
+AT_CLEANUP

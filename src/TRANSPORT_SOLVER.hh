@@ -1,14 +1,16 @@
 #ifndef _TRANSPORT_SOLVER_HH_
 #define _TRANSPORT_SOLVER_HH_
 
-#include <ctime>
+#include <cassert>
 #include <fstream>
 #include <string>
+#include "gsl_math.h"
 #include "AztecOO.h"
-#include "Epetra_FEVector.h"
-#include "Eper"
+#include "Epetra_BLAS.h"
 #include "Epetra_Map.h"
-#include "Epetra_SerialComm.h"
+#include "Epetra_MpiComm.h"
+#include "Epetra_MultiVector.h"
+#include "Teuchos_Time.hpp"
 #include "CELL.hh"
 #include "DOF_HANDLER.hh"
 #include "FINITE_ELEMENT.hh"
@@ -16,6 +18,7 @@
 #include "LS.hh"
 #include "PARAMETERS.hh"
 #include "QUADRATURE.hh"
+#include "TRANSPORT_OPERATOR.hh"
 #include "TRIANGULATION.hh"
 
 using namespace std;
@@ -26,11 +29,11 @@ using namespace std;
  * symmetric Gauss-Seidel or ML, SI, BiCGSTAB, GMRES or GMRES with estimation
  * of the extrem eigenvalues.
  */
-
 class TRANSPORT_SOLVER
 {
   public :
-    TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,string* outputfile);
+    TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,string* outputfile,
+        Epetra_MpiComm* mpi_comm);
 
     ~TRANSPORT_SOLVER();
 
@@ -42,30 +45,32 @@ class TRANSPORT_SOLVER
     void Write_in_file();
 
   private :
-    /// Starting time of the calculation.
-    time_t start_time;
-    /// Ending time of the calculation.
-    time_t end_time;
+    /// Size of the flux moments vector.
+    unsigned int flux_moments_size;
+    /// Timer for the initialization.
+    Teuchos::Time* init_timer;
+    /// Timer for the calculation.
+    Teuchos::Time* calc_timer;
     /// Geometry input filename.
     string* geometry_inputfile;
     /// Parameters input filename.
     string* parameters_inputfile;
     /// Output filename.
     string* outputfile;
-    /// Flux moments vector.
-    Epetra_FeVector* flux_moments;
     /// Epetra communicator.
-    Epetra_SerialComm comm;
+    Epetra_MpiComm* comm;
+    /// Flux moments vector.
+    Epetra_MultiVector* flux_moments;
     /// Epetra map associated to the #flux_moments.
     Epetra_Map* flux_moments_map;
-    /// Degrees of freedom handler of the problem.
-    DOF_HANDLER* dof_handler;
     /// Parameters of the problem.
     PARAMETERS parameters;
     /// Triangulation of the problems.
     TRIANGULATION triangulation;
     /// Vector of the different quadratures.
     vector<QUADRATURE*> quad;
+    /// Degrees of freedom handler of the problem.
+    DOF_HANDLER* dof_handler;
 };
 
 #endif

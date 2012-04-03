@@ -12,9 +12,17 @@ using namespace std;
 
 typedef vector<double> d_vector;
 
-/// ENUM on the FE type: bld (BiLinear Discontinuous) and pwld (PieceWise
+/// Enum on the aggregation type used by ML: uncoupled, mis or uncoupled-mis
+enum AGGREGATION_TYPE{uncoupled,mis,uncoupled_mis};
+
+/// Enum on the FE type: bld (BiLinear Discontinuous) and pwld (PieceWise
 /// Linear Discontinuous).
 enum FE_TYPE{bld,pwld};
+
+/// Enum on the MIP solver type: cg_none (CG without preconditioning), cg_sgs
+/// (CG preconditioned with Symmetric-Gauss-Seidel), cg_ml (CG preconditioned
+/// with ML) and agmg (AGMG).
+enum MIP_SOLVER_TYPE{cg_none,cg_sgs,cg_ml,agmg};
 
 /// Enum on the quadrature type: glc (Gauss-Legendre-Chebyshev) or ls (Level
 /// Symmetric).
@@ -23,6 +31,7 @@ enum QUAD_TYPE{glc,ls};
 /// Enum on the solver type: si (Source Iteration), gmres, gmres_condnum
 /// (GMRES with estimation of the condition number) or bicgstab (BiCGSTAB).
 enum SOLVER_TYPE{si,gmres,gmres_condnum,bicgstab};
+
 /**
  * Read and store all the parameters. Parameters are read in the following
  * order: solver type, tolerance, maximum number of iterations, Fokker-Planck
@@ -78,6 +87,10 @@ class PARAMETERS
     /// Return the intensity of the source i.
     double Get_src(unsigned int i) const;
 
+    /// Return the type iof aggregation used by ML (uncoupled, mis or
+    /// uncoupled-mis).
+    AGGREGATION_TYPE Get_aggregation_type() const;
+
     /// Return the type of finite elements used (BLD or PWLD).
     FE_TYPE Get_fe_type() const;
 
@@ -87,6 +100,10 @@ class PARAMETERS
     /// Return the type of solver used (SI, BiCGSTAB, GMRES or GMRES with
     /// estimation of the condition number).
     SOLVER_TYPE Get_solver_type() const;
+
+    /// Return the type of MIP solver used (CG without preconditioning, CG
+    /// with SGS preconditioning, CG with ML preconditioning or AGMG).
+    MIP_SOLVER_TYPE Get_mip_solver_type() const;
 
     /// Return sigma_t for the material i.
     d_vector Get_sigma_t(unsigned int i) const;
@@ -139,11 +156,16 @@ class PARAMETERS
     double inc_top;
     /// Left incoming flux.
     double inc_left;
+    /// Type of aggregation used by ML: uncoupled, mis or uncoupld-mis.
+    AGGREGATION_TYPE aggregation_type;
     /// Type of finite elements: BLD or PWLD.
     FE_TYPE fe_type;
     /// Type of quadrature: GLC or LS.
     QUAD_TYPE quad_type;
-    /// Type of solver: SI or GMRES.
+    /// Type of MIP solver type: CG without preconditioning, CG preconditioned with 
+    /// Symmetric-Gauss-Seidel, CG preconditioned with ML and AGMG.
+    MIP_SOLVER_TYPE mip_solver_type;
+    /// Type of solver: SI, BiCGSTAB or GMRES.
     SOLVER_TYPE solver_type;
     /// Pointer to the name of the inpuit file containing the parameters of
     /// the problem.
@@ -227,6 +249,10 @@ inline double PARAMETERS::Get_src(unsigned int i) const
 {
   return src[i];
 }
+inline AGGREGATION_TYPE PARAMETERS::Get_aggregation_type() const
+{
+  return aggregation_type;
+}
 
 inline FE_TYPE PARAMETERS::Get_fe_type() const
 {
@@ -236,6 +262,11 @@ inline FE_TYPE PARAMETERS::Get_fe_type() const
 inline QUAD_TYPE PARAMETERS::Get_quad_type() const
 {
   return quad_type;
+}
+
+inline MIP_SOLVER_TYPE PARAMETERS::Get_mip_solver_type() const
+{
+  return mip_solver_type;
 }
 
 inline SOLVER_TYPE PARAMETERS::Get_solver_type() const

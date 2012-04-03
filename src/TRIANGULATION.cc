@@ -176,6 +176,26 @@ void TRIANGULATION::Build_edges()
   }
 }
 
+unsigned int TRIANGULATION::Get_n_materials() const
+{
+  ui_set n_materials;
+  const unsigned int mat_id_size(mat_id.size());
+  for (unsigned int i=0; i<mat_id_size; ++i)
+    n_materials.insert(mat_id[i]);
+
+  return n_materials.size();
+}
+
+unsigned int TRIANGULATION::Get_n_sources() const
+{
+  ui_set n_sources;
+  const unsigned int src_id_size(src_id.size());
+  for (unsigned int i=0; i<src_id_size; ++i)
+    n_sources.insert(src_id[i]);
+
+  return n_sources.size();
+}
+
 EDGE_TYPE TRIANGULATION::Get_edge_type(d_vector const &vertex_0,d_vector const &vertex_1)
 {
   EDGE_TYPE edge_type;
