@@ -69,6 +69,9 @@ class PARAMETERS
     /// Return the number of "angular levels" (DSA counts as an angular level).
     unsigned int Get_n_levels() const;
 
+    /// Return the level of verbosity of the code.
+    unsigned int Get_verbose() const;
+
     /// Return the relative tolerance.
     double Get_tolerance() const;
 
@@ -144,8 +147,10 @@ class PARAMETERS
     unsigned int L_max;
     /// Sn order.
     unsigned int sn;
-    /// Number of levels of the angular multigrid
+    /// Number of levels of the angular multigrid.
     unsigned int n_levels;
+    /// Level of verbosity of the code.
+    unsigned int verbose;
     /// Tolerance on the solver.
     double tolerance;
     /// Bottom incoming flux.
@@ -218,6 +223,11 @@ inline unsigned int PARAMETERS::Get_sn_order() const
 inline unsigned int PARAMETERS::Get_n_levels() const
 {
   return n_levels;
+}
+ 
+inline unsigned int PARAMETERS::Get_verbose() const
+{
+  return verbose;
 }
 
 inline double PARAMETERS::Get_tolerance() const

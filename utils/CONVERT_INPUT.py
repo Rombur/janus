@@ -114,6 +114,10 @@ class CONVERT_INPUT(object) :
     self.Search("MAX ITER")
     self.max_iter = int(self.Read_next(1))
 
+# Read the verbosity level of the code
+    self.Search("VERBOSE")
+    self.verbose = int(self.Read_next(1))
+
 # Read if Fokker-Planck cross sections are used
     self.Search("FOKKER-PLANCK XS")
     self.fokker_planck = self.data[self.begin:self.end-1]
@@ -221,7 +225,10 @@ class CONVERT_INPUT(object) :
     output_file.write(str(self.tolerance)+" ")
 
 # Write the maximum number of iterations
-    output_file.write(str(self.max_iter)+"\n")
+    output_file.write(str(self.max_iter)+" ")
+
+# Write the verbosity level of the code
+    output_file.write(str(self.verbose)+"\n")
 
 # Write Fokker-Planck cross section flag
     output_file.write(self.fokker_planck+"\n")

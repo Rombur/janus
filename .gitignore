@@ -43,3 +43,4 @@ glc_test
 ls_test
 *.inp
 cell_test
+mip_test

@@ -47,13 +47,14 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
   {
     if (param->Get_mip()==true)
       precond->Solve(y);
-
+    Epetra_MultiVector z(y);
+    
     // Compute the scattering source
     Compute_scattering_source(y);
     Sweep(y);
 
     for (unsigned int i=0; i<n_dof; ++i)
-      y[0][i] = x[0][i]-y[0][i];
+      y[0][i] = z[0][i]-y[0][i];
   }  
 
   return 0;

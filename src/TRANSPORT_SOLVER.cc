@@ -112,6 +112,7 @@ void TRANSPORT_SOLVER::Solve()
 {
   calc_timer->start();
   double building_mip_time(0.);
+  double init_prec_mip_time(0.);
   double solve_mip_time(0.);
   // Compute rhs
   if (parameters.Get_multigrid()==true)
@@ -161,29 +162,47 @@ void TRANSPORT_SOLVER::Solve()
         precond.Solve(*flux_moments);
         building_mip_time = precond.Get_building_mip_time();
         solve_mip_time = precond.Get_solve_mip_time();
+        if (parameters.Get_mip_solver_type()==cg_sgs ||
+            parameters.Get_mip_solver_type()==cg_ml)
+          init_prec_mip_time = precond.Get_init_prec_mip_time();
       }
     }
     else
     {
       const unsigned int max_it(parameters.Get_max_it());
       double convergence(1.);
+      MIP* precond(NULL);
 
       TRANSPORT_OPERATOR transport_operator(dof_handler,&parameters,quad[0],
           comm,flux_moments_map);
 
       Epetra_MultiVector flux_moments_old(*flux_moments);
 
+      if (parameters.Get_mip()==true)
+        precond = new MIP(dof_handler,&parameters,quad[0],comm);
+
       for (unsigned int i=0; i<max_it; ++i)
       {
         double num(1.);
         double denom(1.);
+        Epetra_BLAS blas;
 
         transport_operator.Compute_scattering_source(*flux_moments);
         transport_operator.Sweep(*flux_moments,true);
 
+
+        if (parameters.Get_mip()==true)
+        {
+          Epetra_MultiVector diff_flux(*flux_moments);
+          blas.AXPY(flux_moments_size,-1.,flux_moments_old.Values(),
+              diff_flux.Values());
+          precond->Solve(diff_flux);
+          blas.AXPY(flux_moments_size,1.,diff_flux.Values(),flux_moments->Values());
+        }
+
         Epetra_MultiVector diff_flux(*flux_moments);
-        Epetra_BLAS blas;
-        blas.AXPY(flux_moments_size,-1.,flux_moments_old.Values(),diff_flux.Values());
+        blas.AXPY(flux_moments_size,-1.,flux_moments_old.Values(),
+            diff_flux.Values());
 
         // To change: use the norm of the residual for the convergence i.e.
         // the same criterion as the krylov vector
@@ -196,6 +215,16 @@ void TRANSPORT_SOLVER::Solve()
 
         flux_moments_old = *flux_moments;
       }
+      if (parameters.Get_mip()==true)
+      {
+        building_mip_time = precond->Get_building_mip_time();
+        solve_mip_time = precond->Get_solve_mip_time();
+        if (parameters.Get_mip_solver_type()==cg_sgs ||
+            parameters.Get_mip_solver_type()==cg_ml)
+          init_prec_mip_time = precond->Get_init_prec_mip_time();
+        delete precond;
+        precond = NULL;
+      }
     }
   }
   calc_timer->stop();
@@ -204,6 +233,9 @@ void TRANSPORT_SOLVER::Solve()
   if (parameters.Get_mip()==true)
   {
     cout<<"Building MIP time: "<<building_mip_time<<endl;
+    if (parameters.Get_mip_solver_type()==cg_sgs || 
+        parameters.Get_mip_solver_type()==cg_ml)
+      cout<<"Initializing CG preconditioner time: "<<init_prec_mip_time<<endl;
     cout<<"Solving MIP time: "<<solve_mip_time<<endl;
   }
   cout<<"Total elapsed time: "<<init_timer->totalElapsedTime()+
@@ -241,7 +273,7 @@ void TRANSPORT_SOLVER::Write_in_file()
 
   file<<n_cells<<" ";
   file<<n_dof<<" ";
-  file<<quad[0]->Get_n_mom()<<"\n";
+  file<<quad[0]->Get_n_mom()*n_dof<<"\n";
 
   for (unsigned int i=0; i<=n_cells; ++i)
     file<<offset[i]<<" ";

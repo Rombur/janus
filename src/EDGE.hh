@@ -78,7 +78,7 @@ class EDGE
 
     /// Set the normal in the ith component of #external_normal.
     void Set_external_normal(unsigned int i,
-        Teuchos::SerialDenseVector<int,double> normal);
+        Teuchos::SerialDenseVector<int,double> const &normal);
 
     /// Get the normal in the ith component of #external_normal.
     Teuchos::SerialDenseVector<int,double> const* const Get_external_normal(unsigned int i) const;
@@ -185,7 +185,7 @@ inline d_vector const* const EDGE::Get_v1() const
 }
 
 inline void EDGE::Set_external_normal(unsigned int i,
-    Teuchos::SerialDenseVector<int,double> norm)
+    Teuchos::SerialDenseVector<int,double> const &norm)
 {
   external_normal[i] = norm;
 }

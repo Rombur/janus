@@ -45,6 +45,9 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   
   // Read the maximum number of iterations
   parameters_file>>max_it;
+
+  // Read the verbosity of the code
+  parameters_file>>verbose;
   
   // Read if Fokker-Planck cross-section is used
   parameters_file>>fokker_planck_str;

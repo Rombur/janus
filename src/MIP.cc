@@ -12,10 +12,13 @@ MIP::MIP(DOF_HANDLER* dof,PARAMETERS const* param,QUADRATURE const* quad,
   mip_map(NULL),
   A(NULL),
   building_timer(NULL),
+  init_prec_timer(NULL),
   solve_timer(NULL),
+  sgs_prec(NULL),
   ml_prec(NULL)
 {
   building_timer = new Teuchos::Time ("building_mip_timer");
+  init_prec_timer = new Teuchos::Time ("initializing_cg_prec_timer");
   solve_timer = new Teuchos::Time ("solve_mip_timer");
 }
 
@@ -26,10 +29,11 @@ MIP::~MIP()
     delete ml_prec;
     ml_prec = NULL;
   }
-  if (building_timer!=NULL)
+
+  if (sgs_prec!=NULL)
   {
-    delete building_timer;
-    building_timer = NULL;
+    delete sgs_prec;
+    sgs_prec = NULL;
   }
 
   if (solve_timer!=NULL)
@@ -38,11 +42,24 @@ MIP::~MIP()
     solve_timer = NULL;
   }
 
+  if (init_prec_timer!=NULL)
+  {
+    delete init_prec_timer;
+    init_prec_timer = NULL;
+  }
+  
+  if (building_timer!=NULL)
+  {
+    delete building_timer;
+    building_timer = NULL;
+  }
+
   if (A!=NULL)
   {
     delete A;
     A = NULL;
   }
+
   if (mip_map!=NULL)
   {
     delete mip_map;
@@ -51,6 +68,15 @@ MIP::~MIP()
 
   if (a!=NULL)
   {
+    int n(dof_handler->Get_n_dof());
+    int iprint(6);
+    int ijob(-1); 
+    int iter(parameters->Get_max_it());
+    int nrest(1);
+    double tol(parameters->Get_tolerance()/100.);
+    double* f;
+    double* x;
+    dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
     delete a;
     a = NULL;
   }
@@ -71,7 +97,7 @@ MIP::~MIP()
 void MIP::Solve(Epetra_MultiVector &flux_moments)
 {
   // Restrict the Krylov vector to build the lhs
-  if (mip_map!=NULL)
+  if (mip_map==NULL)
     mip_map = new Epetra_Map(dof_handler->Get_n_dof(),0,*comm);
   Epetra_MultiVector b(*mip_map,1);
   for (unsigned int i=0; i<dof_handler->Get_n_dof(); ++i)
@@ -86,6 +112,7 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
     int* n_entries_per_row = new int[dof_handler->Get_n_dof()];
     Compute_n_entries_per_row(n_entries_per_row);
     A = new Epetra_CrsMatrix(Copy,*mip_map,n_entries_per_row);
+    Build_lhs();
   }
 
   // Solve the system of equation
@@ -237,10 +264,12 @@ void MIP::Build_lhs()
 
     for (unsigned int i=i_min; i<i_max; ++i)
     {
-      for (unsigned int j=i_min; j<i_max; ++i)
+      for (unsigned int j=i_min; j<i_max; ++j)
+      {
         values[j-i_min] = ((*cell)->Get_sigma_t(lvl)-(*cell)->Get_sigma_s(lvl,0))*
           (*mass_matrix)(i-i_min,j-i_min)+(*cell)->Get_diffusion_coefficient()*
           (*stiffness_matrix)(i-i_min,j-i_min);
+      }
 
       A->InsertGlobalValues(i,i_max-i_min,&values[0],&indices[0]);
     }
@@ -251,7 +280,7 @@ void MIP::Build_lhs()
   // Surfacic terms: loop over the edges
   vector<EDGE>::iterator edge(dof_handler->Get_edges_begin());
   vector<EDGE>::iterator edge_end(dof_handler->Get_edges_end());
-  for (; edge<edge_end; ++edge_end)
+  for (; edge<edge_end; ++edge)
   {  
     if (edge->Is_interior()==true)
     {
@@ -264,8 +293,8 @@ void MIP::Build_lhs()
       const unsigned int cell_first_dof(cell->Get_first_dof());
       const unsigned int cell_last_dof(cell->Get_last_dof());
       const unsigned int cell_dof(cell_last_dof-cell_first_dof);
-      const unsigned int next_cell_first_dof(cell->Get_first_dof());
-      const unsigned int next_cell_last_dof(cell->Get_last_dof());
+      const unsigned int next_cell_first_dof(next_cell->Get_first_dof());
+      const unsigned int next_cell_last_dof(next_cell->Get_last_dof());
       const unsigned int next_cell_dof(next_cell_last_dof-next_cell_first_dof);
       FINITE_ELEMENT const* const fe(cell->Get_fe());
       FINITE_ELEMENT const* const next_fe(next_cell->Get_fe());
@@ -345,10 +374,10 @@ void MIP::Build_lhs()
       for (unsigned int i=0; i<next_cell_dof; ++i)
       {
         for (unsigned int j=0; j<cell_dof; ++j)
-          values[j] = K*(*fe->Get_upwind_matrix(edge_lid_1))(i,j);
-        A->InsertGlobalValues(i+cell_first_dof,cell_dof,&values[0],&indices[0]);
+          values[j] = -K*(*next_fe->Get_upwind_matrix(edge_lid_1))(i,j);
+        A->InsertGlobalValues(i+next_cell_first_dof,cell_dof,&values[0],&indices[0]);
         for (unsigned int j=0; j<next_cell_dof; ++j)
-          next_values[j] = -K*(*fe->Get_downwind_matrix(edge_lid_1))(i,j);
+          next_values[j] = K*(*next_fe->Get_downwind_matrix(edge_lid_1))(i,j);
         A->InsertGlobalValues(i+next_cell_first_dof,next_cell_dof,&next_values[0],
             &next_indices[0]);
       }
@@ -438,7 +467,7 @@ void MIP::Build_lhs()
           for (unsigned int j=0; j<cell_dof; ++j)
             values[j] = K*(*fe->Get_downwind_matrix(edge_lid_0))(i,j)-0.5*D_m*
               (edge_deln_matrix_m(i,j)+edge_deln_matrix_m(j,i));
-          A->InsertGlobalValues(i,cell_dof,&values[0],&indices[0]);
+          A->InsertGlobalValues(i+cell_first_dof,cell_dof,&values[0],&indices[0]);
         }
       }
     }
@@ -484,6 +513,29 @@ void MIP::Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   solver.SetAztecOption(AZ_solver,AZ_cg); 
   // Convergence criterion ||r||_2/||b||_2
   solver.SetAztecOption(AZ_conv,AZ_rhs);
+  // Get the verbosity of the output
+  switch (parameters->Get_verbose())
+  {
+    case 0 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_none);
+        break;
+      }
+    case 1 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_summary);
+        break;
+      }
+    case 2 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_all);
+        break;
+      }
+    default :
+      {
+        solver.SetAztecOption(AZ_output,AZ_none);
+      }
+  }
 
   // Start solve_timer
   solve_timer->start();
@@ -501,13 +553,49 @@ void MIP::Cg_sgs_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   Epetra_MultiVector x(*mip_map,1);
   Epetra_LinearProblem problem(A,&x,&b);
   AztecOO solver(problem);
-
-  // Use 1 step of symmetric Gauss-Siedel to precondition CG
-  solver.SetAztecOption(AZ_precond,AZ_sym_GS);
+  
+  if (sgs_prec==NULL)
+  {
+    // Start init_prec_timer
+    init_prec_timer->start();
+    Teuchos::ParameterList sgs_list;
+    sgs_list.set("relaxation: type", "symmetric Gauss-Seidel");
+    sgs_prec = new Ifpack_PointRelaxation(A);
+    sgs_prec->SetParameters(sgs_list);
+    sgs_prec->Initialize();
+    sgs_prec->Compute();
+    // Stop init_prec_timer
+    init_prec_timer->stop();
+  }
+  // Set the preconditioner to symmetric Gauss-Seidel
+  solver.SetPrecOperator(sgs_prec);
   // Use CG
   solver.SetAztecOption(AZ_solver,AZ_cg); 
   // Convergence criterion ||r||_2/||b||_2
   solver.SetAztecOption(AZ_conv,AZ_rhs);
+  // Get the verbosity of the output
+  switch (parameters->Get_verbose())
+  {
+    case 0 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_none);
+        break;
+      }
+    case 1 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_summary);
+        break;
+      }
+    case 2 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_all);
+        break;
+      }
+    default :
+      {
+        solver.SetAztecOption(AZ_output,AZ_none);
+      }
+  }
 
   // Start solve_timer
   solve_timer->start();
@@ -528,6 +616,8 @@ void MIP::Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
 
   if (ml_prec==NULL)
   {
+    // Start init_prec_timer
+    init_prec_timer->start();
     Teuchos::ParameterList ml_list;
     // Set default values for classical smoothed aggregation in ml_list
     ML_Epetra::SetDefaults("SA",ml_list);
@@ -541,6 +631,8 @@ void MIP::Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
 
     // Construct the ML object and compute the hierarchy
     ml_prec = new ML_Epetra::MultiLevelPreconditioner(*A,ml_list,true);
+    // Stop init_prec_timer
+    init_prec_timer->stop();
   }
   // Set the AMG as preconditioner
   solver.SetPrecOperator(ml_prec);
@@ -548,6 +640,29 @@ void MIP::Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   solver.SetAztecOption(AZ_solver,AZ_cg); 
   // Convergence criterion ||r||_2/||b||_2
   solver.SetAztecOption(AZ_conv,AZ_rhs);
+  // Get the verbosity of the output
+  switch (parameters->Get_verbose())
+  {
+    case 0 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_none);
+        break;
+      }
+    case 1 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_summary);
+        break;
+      }
+    case 2 :
+      {
+        solver.SetAztecOption(AZ_output,AZ_all);
+        break;
+      }
+    default :
+      {
+        solver.SetAztecOption(AZ_output,AZ_none);
+      }
+  }
 
   // Start solve_timer
   solve_timer->start();
@@ -565,7 +680,7 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
 {
   int n(dof_handler->Get_n_dof());
   int iprint(6);
-  int ijob(0); 
+  int ijob(2); 
   int iter(parameters->Get_max_it());
   int nrest(1);
   double tol(parameters->Get_tolerance()/100.);
@@ -575,18 +690,24 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
 
   x = new double [n];
   f = new double [n];
-
-  // If A has not been converted to fortran yet, we do it now
-  if (a==NULL)
-    Convert_lhs_to_fortran(ia,ja,a,f,n,A->NumGlobalNonzeros());
   
   // Convert the right-hand side to fortran
   Convert_rhs_to_fortran(b,f,n);
 
+  // If A has not been converted to fortran yet, we do it now
+  if (a==NULL)
+  {
+    int ijob_1(1);
+    Convert_lhs_to_fortran(ia,ja,a,n,A->NumGlobalNonzeros());
+    dagmg_(&n,a,ja,ia,f,x,&ijob_1,&iprint,&nrest,&iter,&tol);
+    // Stop init_prec_timer
+    init_prec_timer->stop();
+  }
+
   // Start solve_timer
   solve_timer->start();
   // Solve the MIP equation
-  dagmg_(&n,a,ja,ia,f,x,&ijob,iprint,&nrest,&iter,&tol);
+  dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
   // Stop solve_timer
   solve_timer->stop();
 
@@ -605,14 +726,28 @@ void MIP::Project_solution(Epetra_MultiVector &flux_moments,
     Epetra_MultiVector const &x)
 {                    
   const unsigned int i_max(dof_handler->Get_n_dof());
-  for (unsigned int i=0; i<i_max; ++i)
-    flux_moments[0][i] += x[0][i];
+
+  if (parameters->Get_solver_type()==si)
+  {
+    flux_moments.PutScalar(0.);
+    for (unsigned int i=0; i<i_max; ++i)
+      flux_moments[0][i] = x[0][i];
+  }
+  else
+    for (unsigned int i=0; i<i_max; ++i)
+      flux_moments[0][i] += x[0][i];
 }
   
-void MIP::Convert_lhs_to_fortran(int* ia,int* ja,double* a,double* f,
-    unsigned int n_dof,unsigned int nnz)
+void MIP::Convert_lhs_to_fortran(int* &ia,int* &ja,double* &a,unsigned int n_dof,
+    unsigned int nnz)
 {
-  int offset(0);
+  // Fortran array starts at 1 not 0
+  int offset(1);
+  a = new double[nnz];
+  ja = new int[nnz];
+  ia = new int[n_dof+1];
+  ia[0] = offset;
+
   for (unsigned int i=0; i<n_dof; ++i)
   {
     // Copy A to a, ia and ja
@@ -626,7 +761,8 @@ void MIP::Convert_lhs_to_fortran(int* ia,int* ja,double* a,double* f,
     for (int j=0; j<n_entries; ++j)
     {
       a[offset+j] = val[j];
-      ja[offset+j] = ind[j];
+      // Fortran array starts at 1 not 0
+      ja[offset+j] = ind[j]+1;
     }
 
     offset += n_entries;
@@ -641,7 +777,7 @@ void MIP::Convert_lhs_to_fortran(int* ia,int* ja,double* a,double* f,
 }
 
 void MIP::Convert_rhs_to_fortran(Epetra_MultiVector const &b,double* f,
-    unsigned int n_dof) const
+    const unsigned int n_dof) const
 {
   // Copy b to f
   for (unsigned int i=0; i<n_dof; ++i)

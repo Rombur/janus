@@ -2,12 +2,15 @@
 #define _MIP_HH
 
 #include <cassert>
+#include <cmath>
 #include <iostream>
+#include "gsl_math.h"
 #include "AztecOO.h"
 #include "Epetra_CrsMatrix.h"
 #include "Epetra_LinearProblem.h"
 #include "Epetra_Map.h"
 #include "Epetra_MultiVector.h"
+#include "Ifpack_PointRelaxation.h"
 #include "ml_include.h"
 #include "ml_MultiLevelPreconditioner.h"
 #include "Teuchos_BLAS.hpp"
@@ -45,8 +48,8 @@ extern "C"
    * @todo use dagmgpar_
    * @todo use setup and then solve
    */
-  void dagmg_(int* n,double a[],int ja[],int ia[],double f[],double x[],int* ijob,int iprint,
-      int* nrest,int* iter,double* tol);
+  void dagmg_(int* n,double a[],int ja[],int ia[],double f[],double x[],int* ijob,
+      int* iprint,int* nrest,int* iter,double* tol);
 }
 #endif
 
@@ -69,6 +72,9 @@ class MIP
 
     /// Return the time needed to build the matrix.
     double Get_building_mip_time() const;
+
+    /// Return the time need to initialize the preconditioner for CG
+    double Get_init_prec_mip_time() const;
 
     /// Return the time needed to solve the matrix. When using AGMG, the
     /// conversion time between data types is not counted.
@@ -122,18 +128,19 @@ class MIP
     void Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
 #endif
 
-    /// Add the solution to the 0th flux moment.
-    /// @todo Check that x doesn't have to be scale by 1./sqrt(4pi).
+    /// Add the solution to the 0th angular flux moment if the transport is
+    /// solved using a Krylov method. Otherwise the correction is copied in
+    /// flux_moments.
     void Project_solution(Epetra_MultiVector &flux_moments,
         Epetra_MultiVector const &x);
     
     /// Convert the Epetra left-hand side to fortran data types.
-    void Convert_lhs_to_fortran(int* ia,int* ja,double* a,double* f,unsigned int n_dof,
+    void Convert_lhs_to_fortran(int* &ia,int* &ja,double* &a,unsigned int n_dof,
         unsigned int nnz);
     
     /// Convert the Epetra right-hand side to fortran data types.
     void Convert_rhs_to_fortran(Epetra_MultiVector const &b,double* f,
-        unsigned int n_dof) const;
+        const unsigned int n_dof) const;
 
     /// Convert the fortran rhs to Epetra rhs.
     void Convert_rhs_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof)    
@@ -161,8 +168,12 @@ class MIP
     Epetra_CrsMatrix* A;
     /// Timer for building the matrix.
     Teuchos::Time* building_timer;
+    /// Timer for initializing the CG preconditioner.
+    Teuchos::Time* init_prec_timer;
     /// Timer for solving MIP.
     Teuchos::Time* solve_timer;
+    /// SGS preconditioner.
+    Ifpack_PointRelaxation* sgs_prec;
     /// Multi-level preconditioner.
     ML_Epetra::MultiLevelPreconditioner* ml_prec;
 };
@@ -170,6 +181,11 @@ class MIP
 inline double MIP::Get_building_mip_time() const
 {
   return building_timer->totalElapsedTime();
+}
+
+inline double MIP::Get_init_prec_mip_time() const
+{
+  return init_prec_timer->totalElapsedTime();
 }
 
 inline double MIP::Get_solve_mip_time() const

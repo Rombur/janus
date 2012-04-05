@@ -24,3 +24,6 @@ AT_CLEANUP
 AT_SETUP([CELL])
 AT_CHECK([cell_test],[],[])
 AT_CLEANUP
+AT_SETUP([MIP])
+AT_CHECK([mip_test],[],[ignore],[])
+AT_CLEANUP

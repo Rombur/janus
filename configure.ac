@@ -55,8 +55,8 @@ AC_SUBST([GSL_LIBS])
 
 AC_ARG_WITH([trilinos-lib],
             [AS_HELP_STRING([--with-trilinos-lib],[location of the trilinos library])],
-            [TRILINOS_LIBS="-L$withval -ltrilinos_teuchos -ltrilinos_aztecoo -ltrilinos_epetra -ltrilinos_ml"],
-            [TRILINOS_LIBS="-L/usr/lib -ltrilinos_teuchos -ltrilinos_aztecoo -ltrilinos_epetra -ltrilinos_ml"])
+            [TRILINOS_LIBS="-L$withval -ltrilinos_teuchos -ltrilinos_aztecoo -ltrilinos_epetra -ltrilinos_ifpack -ltrilinos_ml"],
+            [TRILINOS_LIBS="-L/usr/lib -ltrilinos_teuchos -ltrilinos_aztecoo -ltrilinos_epetra -ltrilinos_ifpack -ltrilinos_ml"])
 AC_SUBST([TRILINOS_LIBS])
 
 AC_ARG_WITH([lapack-lib],
