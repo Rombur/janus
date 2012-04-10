@@ -5,8 +5,8 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
   n_dof(0),
   triangulation(triang)
 {
-  unsigned int sf_index(0);
   unsigned int start_dof(0);
+  unsigned int start_reflective_dof(0);
   const unsigned int n_cells(triangulation->Get_n_cells());
   for (unsigned int i=0; i<n_cells; ++i)
   {
@@ -47,7 +47,11 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
       cell_edges[j] = edge;
     }
     if (cell_saf==true)
-      saf_map[i] = start_dof;
+    {
+      saf_map_dof[i] = start_dof;
+      saf_map_reflective_dof[i] = start_reflective_dof;
+      start_reflective_dof += fe->Get_dof_per_cell();
+    }
     // Create the cells and append them in mesh
     CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
           param.Get_src(triangulation->Get_src_id(i)),
@@ -81,7 +85,6 @@ DOF_HANDLER::~DOF_HANDLER()
 void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
 {
   const unsigned int n_quad(quad.size());
-  const unsigned int n_cells(triangulation->Get_n_cells());
   sweep_order.resize(n_quad);
   most_n_bottom.resize(n_quad);
   most_n_right.resize(n_quad);
@@ -105,10 +108,10 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
       vector<EDGE>::iterator edge_end(triangulation->Get_edges_end());
       for (; edge<edge_end; ++edge)
       {
-        if ((edge->Get_edge_type()==left_boundary) && (omega(0)>0.) ||
-            (edge->Get_edge_type()==right_boundary) && (omega(0)<0.) ||
-            (edge->Get_edge_type()==bottom_boundary) && (omega(1)>0.) ||
-            (edge->Get_edge_type()==top_boundary) && (omega(1)<0.))
+        if (((edge->Get_edge_type()==left_boundary) && (omega(0)>0.)) ||
+            ((edge->Get_edge_type()==right_boundary) && (omega(0)<0.)) ||
+            ((edge->Get_edge_type()==bottom_boundary) && (omega(1)>0.)) ||
+            ((edge->Get_edge_type()==top_boundary) && (omega(1)<0.)))
           incoming_edges.push_back(edge->Get_gid());
       }
       while (incoming_edges.size()!=0)

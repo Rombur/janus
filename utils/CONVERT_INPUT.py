@@ -213,7 +213,7 @@ class CONVERT_INPUT(object) :
     if self.solver=="si" :
       output_file.write("SI ")
     elif self.solver=="bicgstab" :
-      output_file.write("BiCGSTAB")
+      output_file.write("BiCGSTAB ")
     elif self.solver=="gmres_condnum" :
       output_file.write("GMRES_CONDNUM ")
     elif self.solver=="gmres" :

@@ -117,6 +117,52 @@ void TRANSPORT_SOLVER::Solve()
   // Compute rhs
   if (parameters.Get_multigrid()==true)
   {
+    const unsigned int lvl(0);
+    const unsigned int max_lvl(parameters.Get_n_levels()-1);
+    TRANSPORT_OPERATOR transport_operator(dof_handler,&parameters,&quad,comm,
+        flux_moments_map,lvl,max_lvl);
+
+    // Compute right-hand side of GMRES (uncollided flux moments (S*inv(L)*q))
+    Epetra_MultiVector rhs(*flux_moments);
+    transport_operator.Sweep(rhs,true);
+
+    Epetra_LinearProblem problem(&transport_operator,flux_moments,&rhs);
+
+    AztecOO solver(problem);
+
+    // By default use ILUT as preconditioner -> by default the Krylov
+    // solvers cannot be used matrix-free
+    solver.SetAztecOption(AZ_precond,AZ_none);
+
+    if (parameters.Get_solver_type()==bicgstab)
+      solver.SetAztecOption(AZ_solver,AZ_bicgstab);
+    else 
+    {
+      // Restart parameter for GMRES
+      int krylov_space(30);
+      // Set a new Krylov subspace size
+      solver.SetAztecOption(AZ_kspace,krylov_space);
+      if (parameters.Get_solver_type()==gmres_condnum)
+        solver.SetAztecOption(AZ_solver,AZ_gmres_condnum);
+      else
+        solver.SetAztecOption(AZ_solver,AZ_gmres);
+    }
+    // Convergence criterion ||r||_2/||b||_2
+    solver.SetAztecOption(AZ_conv,AZ_rhs);
+
+    // Solve the transport equation
+    solver.Iterate(parameters.Get_max_it(),parameters.Get_tolerance());
+
+    // Apply the preconditioner to get the solution
+    transport_operator.Apply_preconditioner(*flux_moments);
+    
+    // Get the elapsed times
+    MIP* mip(transport_operator.Get_mip());
+    building_mip_time = mip->Get_building_mip_time();
+    solve_mip_time = mip->Get_solve_mip_time();
+    if (parameters.Get_mip_solver_type()==cg_sgs ||
+        parameters.Get_mip_solver_type()==cg_ml)
+      init_prec_mip_time = mip->Get_init_prec_mip_time();
   }
   else
   {
@@ -156,15 +202,16 @@ void TRANSPORT_SOLVER::Solve()
       // Solve the transport equation
       solver.Iterate(parameters.Get_max_it(),parameters.Get_tolerance());
 
+      // Apply the preconditioner to get the solution
       if (parameters.Get_mip()==true)
       {
-        MIP precond(dof_handler,&parameters,quad[0],comm);
-        precond.Solve(*flux_moments);
-        building_mip_time = precond.Get_building_mip_time();
-        solve_mip_time = precond.Get_solve_mip_time();
+        MIP* precond(transport_operator.Get_mip());
+        precond->Solve(*flux_moments);
+        building_mip_time = precond->Get_building_mip_time();
+        solve_mip_time = precond->Get_solve_mip_time();
         if (parameters.Get_mip_solver_type()==cg_sgs ||
             parameters.Get_mip_solver_type()==cg_ml)
-          init_prec_mip_time = precond.Get_init_prec_mip_time();
+          init_prec_mip_time = precond->Get_init_prec_mip_time();
       }
     }
     else
@@ -179,7 +226,12 @@ void TRANSPORT_SOLVER::Solve()
       Epetra_MultiVector flux_moments_old(*flux_moments);
 
       if (parameters.Get_mip()==true)
-        precond = new MIP(dof_handler,&parameters,quad[0],comm);
+      {
+        if (parameters.Get_transport_correction()==true)
+          precond = new MIP (1,dof_handler,&parameters,quad[0],comm);
+        else
+          precond = new MIP (0,dof_handler,&parameters,quad[0],comm);
+      }
 
       for (unsigned int i=0; i<max_it; ++i)
       {

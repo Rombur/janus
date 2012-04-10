@@ -63,7 +63,11 @@ class DOF_HANDLER
 
     /// Return the index of first basis function of a "reflective" cell given 
     /// the cell id.
-    unsigned int Get_saf_map(unsigned int cell_id);
+    unsigned int Get_saf_map_dof(unsigned int cell_id);
+
+    /// Return the "reflective" index of first basis function of a "reflective" 
+    /// cell given the cell id.
+    unsigned int Get_saf_map_reflective_dof(unsigned int cell_id);
 
     /// Return the sweep ordering for a given quadrature and a given
     /// direction.
@@ -96,9 +100,12 @@ class DOF_HANDLER
     unsigned int n_sf_per_dir;
     /// Number of degrees of freedoms.
     unsigned int n_dof;
-    /// Significant angular fluxes map: the key is the cell id and the value
-    /// is the index of the first basis function.
-    ui_map saf_map;
+    /// Significant angular fluxes map of the dof: the key is the cell id and the 
+    /// value is the index of the first basis function.
+    ui_map saf_map_dof;
+    /// Significant angular fluxes map of the "reflective" dof: the key is the cell 
+    /// id  and the value is the reflective index of the first basis function.
+    ui_map saf_map_reflective_dof;
     /// Pointer to the triangulation of the geometry.
     TRIANGULATION *triangulation;
     /// Most normal directions on the bottom boundary for each quadrature.
@@ -154,9 +161,14 @@ inline unsigned int DOF_HANDLER::Get_n_cells() const
   return triangulation->Get_n_cells();
 }
 
-inline unsigned int DOF_HANDLER::Get_saf_map(unsigned int cell_id) 
+inline unsigned int DOF_HANDLER::Get_saf_map_dof(unsigned int cell_id) 
 {
-  return saf_map[cell_id];
+  return saf_map_dof[cell_id];
+}
+
+inline unsigned int DOF_HANDLER::Get_saf_map_reflective_dof(unsigned int cell_id) 
+{
+  return saf_map_reflective_dof[cell_id];
 }
 
 inline ui_vector const* const DOF_HANDLER::Get_sweep_order(unsigned int q,

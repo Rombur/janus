@@ -19,7 +19,6 @@ int main(int argc,char** argv)
 {
   MPI_Init(&argc,&argv);
   Epetra_MpiComm comm(MPI_COMM_WORLD);
-  const double inv_sqrt_4pi(1./sqrt((2.*M_PI)));
 
   string geometry_inp("/home/bruno/Documents/Transport/janus/tests/geometry_mip.inp");
   string parameters_inp("/home/bruno/Documents/Transport/janus/tests/parameters_mip.inp");
@@ -63,24 +62,24 @@ int main(int argc,char** argv)
   flux_moments[0][14] = 0.15480683;
   flux_moments[0][15] = 0.22424409;
 
-  solution[0][0] = inv_sqrt_4pi * 0.01579434;
-  solution[0][1] = inv_sqrt_4pi * 0.0410164;
-  solution[0][2] = inv_sqrt_4pi * 0.11759913;
-  solution[0][3] = inv_sqrt_4pi * 0.04101419;
-  solution[0][4] = inv_sqrt_4pi * 0.04100877;
-  solution[0][5] = inv_sqrt_4pi * 0.01578621;
-  solution[0][6] = inv_sqrt_4pi * 0.04109177;
-  solution[0][7] = inv_sqrt_4pi * 0.11758109;
-  solution[0][8] = inv_sqrt_4pi * 0.04103222;
-  solution[0][9] = inv_sqrt_4pi * 0.11757449;
-  solution[0][10] = inv_sqrt_4pi * 0.04109206;
-  solution[0][11] = inv_sqrt_4pi * 0.01576069;
-  solution[0][12] = inv_sqrt_4pi * 0.1176016;
-  solution[0][13] = inv_sqrt_4pi * 0.04107562;
-  solution[0][14] = inv_sqrt_4pi * 0.01581032;
-  solution[0][15] = inv_sqrt_4pi * 0.04107403;
+  solution[0][0] = 0.01579434;
+  solution[0][1] = 0.0410164;
+  solution[0][2] = 0.11759913;
+  solution[0][3] = 0.04101419;
+  solution[0][4] = 0.04100877;
+  solution[0][5] = 0.01578621;
+  solution[0][6] = 0.04109177;
+  solution[0][7] = 0.11758109;
+  solution[0][8] = 0.04103222;
+  solution[0][9] = 0.11757449;
+  solution[0][10] = 0.04109206;
+  solution[0][11] = 0.01576069;
+  solution[0][12] = 0.1176016;
+  solution[0][13] = 0.04107562;
+  solution[0][14] = 0.01581032;
+  solution[0][15] = 0.04107403;
 
-  MIP precond(&dof_handler,&parameters,quad[0],&comm);
+  MIP precond(0,&dof_handler,&parameters,quad[0],&comm);
   precond.Solve(flux_moments);
 
   for (unsigned int i=0; i<dof_handler.Get_n_dof(); ++i)

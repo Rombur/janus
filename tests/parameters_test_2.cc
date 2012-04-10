@@ -64,7 +64,7 @@ int main(int argc,char** argv)
   sigma_s[2][2][0] = 30.;
 
   // Need to use AT_DATA instead of hard coding the path
-  string filename("/home/bruno/Documents/Transport/janus/tests/parameters_2.txt");
+  string filename("/home/bruno/Documents/Transport/janus/tests/parameters_2.inp");
 
   PARAMETERS param(&filename);
 

@@ -48,6 +48,9 @@ class PARAMETERS
     /// Read the parameters input file.
     void Read_parameters(unsigned int n_src,unsigned int n_mat);
 
+    /// Return the flag on the transport correction.
+    bool Get_transport_correction() const;
+
     /// Return the flag on Galerkin quadrature.
     bool Get_galerkin() const;
 
@@ -189,6 +192,11 @@ class PARAMETERS
     /// multigrid.
     vector<vector<d_vector> > sigma_s_lvl;
 };
+
+inline bool PARAMETERS::Get_transport_correction() const
+{
+  return transport_correction;
+}
 
 inline bool PARAMETERS::Get_galerkin() const
 {

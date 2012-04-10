@@ -24,6 +24,15 @@ AT_CLEANUP
 AT_SETUP([CELL])
 AT_CHECK([cell_test],[],[])
 AT_CLEANUP
+AT_SETUP([EDGE])
+AT_CHECK([edge_test],[],[])
+AT_CLEANUP
+AT_SETUP([DOF HANDLER])
+AT_CHECK([dof_handler_test],[],[])
+AT_CLEANUP
 AT_SETUP([MIP])
 AT_CHECK([mip_test],[],[ignore],[])
+AT_CLEANUP
+AT_SETUP([TRANSPORT OPERATOR: BLD ISOTROPIC AGMG])
+AT_CHECK([transport_operator_test_1],[],[ignore],[])
 AT_CLEANUP

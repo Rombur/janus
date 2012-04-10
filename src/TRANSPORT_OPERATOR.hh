@@ -32,14 +32,22 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
 {
   public :
     TRANSPORT_OPERATOR(DOF_HANDLER* dof,PARAMETERS const* param,
-        QUADRATURE const* quad,Epetra_Comm const* comm,
+        QUADRATURE* quad,Epetra_Comm const* comm,
         Epetra_Map const* flux_moments_map);
+
+    TRANSPORT_OPERATOR(DOF_HANDLER* dof,PARAMETERS const* param,
+        vector<QUADRATURE*> const* quad_vector,Epetra_Comm const* comm, 
+        Epetra_Map const* flux_moments_map,unsigned int level,unsigned int max_level,
+        MIP* preconditioner=NULL);
 
     ~TRANSPORT_OPERATOR();
 
     /// Return the result of the transport operator applied to x in y. Return
     /// 0 if successful.
     int Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y) const;
+
+    /// Apply the angular multigrid preconditioner to a given vector.
+    void Apply_preconditioner(Epetra_MultiVector &x);
 
     /// Compute the scattering given a flux.
     void Compute_scattering_source(Epetra_MultiVector const &x) const;
@@ -48,16 +56,17 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// sources are not included in the sweep.
     /// @todo The sweep can be optimized to use less memory (only keep the
     /// front wave).
-    void Sweep(Epetra_MultiVector &flx_moments,bool rhs=false) const;
+    void Sweep(Epetra_MultiVector &flux_moments,bool rhs=false) const;
 
     /// This method is not implemented.
-    int SetUseTranspose(bool UseTranspose) {};
+    int SetUseTranspose(bool UseTranspose) {return 0;};
 
     /// This method is not implemented.
-    int ApplyInverse(Epetra_MultiVector const &X, Epetra_MultiVector &Y) const {};
+    int ApplyInverse(Epetra_MultiVector const &X, Epetra_MultiVector &Y) const 
+      {return 0;};
 
     /// This method is not implemented.
-    double NormInf() const {};
+    double NormInf() const {return 0;};
 
     /// Return a character string describing the operator.
     char const* Label() const;
@@ -81,24 +90,37 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// operator.
     Epetra_Map const& OperatorRangeMap() const;
 
+    /// Restrict a given vector to size of this TRANSPORT_OPERATOR object.
+    void Restrict_vector(Epetra_MultiVector &x) const;
+
+    /// Project and add a given vector y from a coarser TRANSPORT_OPERATOR 
+    /// object to x. x and y are the same on output.
+    void Project_vector(Epetra_MultiVector &x,Epetra_MultiVector &y) const;
+
+    /// Return a pointer to the MIP DSA.
+    MIP* Get_mip();
+
   private :
     /// Return a Teuchos vector with the value of the significant flux for
     /// a given cell and a given direction.
     Teuchos::SerialDenseVector<int,double> Get_saf(unsigned int idir,
-        unsigned int n_dir,unsigned int dof_per_cell,Epetra_MultiVector &flx_moments,
-        CELL const* const cell,EDGE const* const edge) const;
+        unsigned int n_dir,unsigned int n_mom,unsigned int dof_per_cell,
+        Epetra_MultiVector &flux_moments,CELL const* const cell,
+        EDGE const* const edge) const;
 
     /// Store the Significant Angular Fluxes of a given cell and direction.
-    void Store_saf(Epetra_MultiVector const &psi,Epetra_MultiVector &flx_moments,
-        CELL const* const cell,unsigned int idir,unsigned int n_dir,
+    void Store_saf(Epetra_MultiVector const &psi,Epetra_MultiVector &flux_moments,
+        CELL const* const cell,unsigned int idir,unsigned int n_mom,
         unsigned int dof_per_cell) const;
 
-    /// Temporary variable.
+    /// Current level in the angular multigrid.
     unsigned int lvl;
+    /// Maximum level in the angular multigrid.
+    unsigned int max_lvl;
     /// Epetra communicator.
     Epetra_Comm const* comm;
     /// Epetra map
-    Epetra_Map const* flx_moments_map;
+    Epetra_Map const* flux_moments_map;
     /// Scattering source for each moment.
     /// @todo Change the Teuchos::SerialDenseVector to Epetra_MultiVector.
     vector<Teuchos::SerialDenseVector<int,double> >* scattering_src;
@@ -110,7 +132,14 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// Pointer to the parameters object.
     PARAMETERS const* param;
     /// Pointer to the quadrature object.
-    QUADRATURE const* quad;
+    QUADRATURE* quad;
+    /// Pointer to the vector of pointers to the quadrature.
+    vector<QUADRATURE*> const* quad_vector;
 };
+
+inline MIP* TRANSPORT_OPERATOR::Get_mip()
+{
+  return precond;
+}
 
 #endif

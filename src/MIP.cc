@@ -1,7 +1,8 @@
 #include "MIP.hh"
 
-MIP::MIP(DOF_HANDLER* dof,PARAMETERS const* param,QUADRATURE const* quad,
-    Epetra_Comm const* comm) :
+MIP::MIP(unsigned int level,DOF_HANDLER* dof,PARAMETERS const* param,
+    QUADRATURE const* quad,Epetra_Comm const* comm) :
+  lvl(level),
   ia(NULL),
   ja(NULL),
   a(NULL),
@@ -179,7 +180,6 @@ void MIP::Compute_n_entries_per_row(int* n)
 
 void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
 {
-  unsigned int lvl(0);
   Teuchos::BLAS<int,double> blas;
   Teuchos::SerialDenseMatrix<int,double> const* const D2M(quad->Get_D2M());
   vector<CELL*>::iterator cell(dof_handler->Get_mesh_begin());
@@ -242,8 +242,6 @@ void MIP::Build_lhs()
 {
   // Start the building_timer
   building_timer->start();
-
-  const unsigned int lvl(0);
 
   // Volumetric terms: loop over the cells
   vector<CELL*>::iterator cell(dof_handler->Get_mesh_begin());

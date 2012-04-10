@@ -62,8 +62,8 @@ extern "C"
 class MIP
 {
   public :
-    MIP(DOF_HANDLER* dof,PARAMETERS const* param,QUADRATURE const* quad,
-        Epetra_Comm const* comm);
+    MIP(unsigned int level,DOF_HANDLER* dof,PARAMETERS const* param,
+        QUADRATURE const* quad,Epetra_Comm const* comm);
 
     ~MIP();
 
@@ -109,7 +109,7 @@ class MIP
      * The default paramaters are:
      *  - "max levels" = 10
      *  - "prec type" = "MGV"
-     *  - "increasing or decreasong" = "increasing"
+     *  - "increasing or decreasing" = "increasing"
      *  - "aggregation: type" = "Uncoupled-MIS"
      *  - "aggregation: damping factor" = 1.333
      *  - "eigen-analysis: type" = "cg"
@@ -146,6 +146,8 @@ class MIP
     void Convert_rhs_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof)    
       const;
 
+    /// Level of the cross sections to use.
+    unsigned int lvl;
     /// Indicate where every row starts.
     int* ia;
     /// Column entries.
