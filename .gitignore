@@ -47,3 +47,4 @@ mip_test
 dof_handler_test
 edge_test
 transport_operator_test_1
+transport_operator_test_2

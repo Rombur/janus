@@ -149,6 +149,12 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
   }
 }
 
+void MIP::Free_ml()
+{
+  delete ml_prec;
+  ml_prec = NULL;
+}
+
 void MIP::Compute_n_entries_per_row(int* n)
 {
   vector<CELL*>::iterator cell(dof_handler->Get_mesh_begin());
@@ -310,11 +316,11 @@ void MIP::Build_lhs()
       edge_deln_matrix_m += edge_deln_matrix_m_y;
       // n_x dot edge_deln_matrix_p_x
       Teuchos::SerialDenseMatrix<int,double> edge_deln_matrix_p_x(
-          *(fe->Get_edge_deln_matrix(edge_lid_1,0)));
+          *(next_fe->Get_edge_deln_matrix(edge_lid_1,0)));
       edge_deln_matrix_p_x *= normal_x;
       // n_y dot edge_deln_matrix_p_y
       Teuchos::SerialDenseMatrix<int,double> edge_deln_matrix_p_y(
-          *(fe->Get_edge_deln_matrix(edge_lid_1,1)));
+          *(next_fe->Get_edge_deln_matrix(edge_lid_1,1)));
       edge_deln_matrix_p_y *= normal_y;
       // n dot edge_deln_matrix_p
       Teuchos::SerialDenseMatrix<int,double> edge_deln_matrix_p(
@@ -334,11 +340,11 @@ void MIP::Build_lhs()
       coupling_edge_deln_matrix_m += coupling_edge_deln_matrix_m_y;
       // n_x dot coupling_edge_deln_matrix_p_x
       Teuchos::SerialDenseMatrix<int,double> coupling_edge_deln_matrix_p_x(
-          *(fe->Get_coupling_edge_deln_matrix(edge_lid_1,0)));
+          *(next_fe->Get_coupling_edge_deln_matrix(edge_lid_1,0)));
       coupling_edge_deln_matrix_p_x *= normal_x;
       // n_y dot coupling_edge_deln_matrix_p_y
       Teuchos::SerialDenseMatrix<int,double> coupling_edge_deln_matrix_p_y(
-          *(fe->Get_coupling_edge_deln_matrix(edge_lid_1,1)));
+          *(next_fe->Get_coupling_edge_deln_matrix(edge_lid_1,1)));
       coupling_edge_deln_matrix_p_y *= normal_y;
       // n dot coupling_edge_deln_matrix_p
       Teuchos::SerialDenseMatrix<int,double> coupling_edge_deln_matrix_p(

@@ -28,16 +28,25 @@ int main(int argc,char** argv)
   sigma_t[0] = 10.1;
   sigma_t[1] = 11.5;
   sigma_t[2] = 12.5;
-  vector<d_vector> sigma_s(3,d_vector(3,0.));
+  vector<d_vector> sigma_s(3,d_vector(6,0.));
   sigma_s[0][0] = 10.;
   sigma_s[0][1] = 9.;
-  sigma_s[0][2] = 8.;
+  sigma_s[0][2] = 9.;
+  sigma_s[0][3] = 8.;
+  sigma_s[0][4] = 8.;
+  sigma_s[0][5] = 8.;
   sigma_s[1][0] = 10.;
   sigma_s[1][1] = 9.; 
-  sigma_s[1][2] = 8.; 
+  sigma_s[1][2] = 9.; 
+  sigma_s[1][3] = 8.; 
+  sigma_s[1][4] = 8.; 
+  sigma_s[1][5] = 8.; 
   sigma_s[2][0] = 10.;
   sigma_s[2][1] = 9.; 
-  sigma_s[2][2] = 8.; 
+  sigma_s[2][2] = 9.; 
+  sigma_s[2][3] = 8.; 
+  sigma_s[2][4] = 8.; 
+  sigma_s[2][5] = 8.; 
 
   // Need to use AT_DATA instead of hard coding the path
   string filename("/home/bruno/Documents/Transport/janus/tests/parameters_1.inp");
@@ -85,7 +94,7 @@ int main(int argc,char** argv)
 
   // Check the sigma_s
   for (unsigned int i=0; i<3; ++i)
-    for (unsigned int j=0; j<3; ++j)
+    for (unsigned int j=0; j<6; ++j)
       assert(sigma_s[i][j]==param.Get_sigma_s(i)[0][j]);
 
   return 0;

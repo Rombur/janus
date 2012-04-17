@@ -124,17 +124,18 @@ void QUADRATURE::Compute_harmonics()
   {
     for (unsigned int m=0; m<l+1; ++m)
     {
+      double phase(pow(-1.,m));
       for (unsigned int idir=0; idir<n_dir; ++idir)
       {
         // Compute the normalized associated Legendre polynomail using GSL:
-        // (-1)^m sqrt((2l+1)/4pi (l-m)!/(l+m)!) P_l^m(cos(theta))
+        // sqrt((2l+1)/4pi (l-m)!/(l+m)!) P_l^m(cos(theta))
         // note that the factor (-1)^m is included in the P_l^m evaluation
         const double P_lm(gsl_sf_legendre_sphPlm(l,m,omega[idir](2)));
         if (m==0)
           Ye[l][m][idir] = P_lm;
         else
-          Ye[l][m][idir] = M_SQRT2*P_lm*cos(m*phi[idir]);
-        Yo[l][m][idir] = M_SQRT2*P_lm*sin(m*phi[idir]);
+          Ye[l][m][idir] = M_SQRT2*phase*P_lm*cos(m*phi[idir]);
+        Yo[l][m][idir] = M_SQRT2*phase*P_lm*sin(m*phi[idir]);
       } 
     }
   }
@@ -176,6 +177,7 @@ void QUADRATURE::Compute_harmonics()
       unsigned int pos(0);
       for (unsigned int l=0; l<L_max_x; ++l)
       {
+        // double ragusa_norm(sqrt(4.*M_PI)*sqrt(2.*l+1));
         for (int m=l; m>=0; --m)
         {
           // Do not use the EVEN spherical harmonics when m+l is odd

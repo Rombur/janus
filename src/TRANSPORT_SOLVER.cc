@@ -19,17 +19,14 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
   init_timer->start();
   
   // Build the triangulation
-  cout<<"Building the triangulation"<<endl;
   triangulation.Read_geometry();
   triangulation.Build_edges();
 
   // Read the parameters
-  cout<<"Reading the parameters"<<endl;
   parameters.Read_parameters(triangulation.Get_n_sources(),
       triangulation.Get_n_materials());
 
   // Build the quadratures
-  cout<<"Building the quadratures"<<endl;
   unsigned int n_lvl(parameters.Get_n_levels());
   unsigned int tmp_sn(parameters.Get_sn_order());
   unsigned int tmp_L_max(parameters.Get_L_max());
@@ -50,19 +47,15 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
   }                               
 
   // Build the dof handler
-  cout<<"Building the dof handler"<<endl;
   dof_handler = new DOF_HANDLER(&triangulation,parameters);
-  cout<<"Compute sweep ordering"<<endl;
   dof_handler->Compute_sweep_ordering(quad);
 
 
   // Instantiate the flux moments map and vector
-  cout<<"Instantiate the flux moments map and vector"<<endl;
   flux_moments_size = dof_handler->Get_n_dof()*quad[0]->Get_n_mom()+
     dof_handler->Get_n_sf_per_dir()*quad[0]->Get_n_dir();
   flux_moments_map = new Epetra_Map(flux_moments_size,0,*comm);
   flux_moments = new Epetra_MultiVector(*flux_moments_map,1);
-  cout<<"Initialization done"<<endl;
   init_timer->stop();
 }
 
@@ -163,6 +156,8 @@ void TRANSPORT_SOLVER::Solve()
     if (parameters.Get_mip_solver_type()==cg_sgs ||
         parameters.Get_mip_solver_type()==cg_ml)
       init_prec_mip_time = mip->Get_init_prec_mip_time();
+    if (parameters.Get_mip_solver_type()==cg_ml)
+      mip->Free_ml();
   }
   else
   {
@@ -205,13 +200,15 @@ void TRANSPORT_SOLVER::Solve()
       // Apply the preconditioner to get the solution
       if (parameters.Get_mip()==true)
       {
-        MIP* precond(transport_operator.Get_mip());
-        precond->Solve(*flux_moments);
-        building_mip_time = precond->Get_building_mip_time();
-        solve_mip_time = precond->Get_solve_mip_time();
+        MIP* mip(transport_operator.Get_mip());
+        mip->Solve(*flux_moments);
+        building_mip_time = mip->Get_building_mip_time();
+        solve_mip_time = mip->Get_solve_mip_time();
         if (parameters.Get_mip_solver_type()==cg_sgs ||
             parameters.Get_mip_solver_type()==cg_ml)
-          init_prec_mip_time = precond->Get_init_prec_mip_time();
+          init_prec_mip_time = mip->Get_init_prec_mip_time();
+        if (parameters.Get_mip_solver_type()==cg_ml)
+          mip->Free_ml();
       }
     }
     else

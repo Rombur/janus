@@ -91,7 +91,7 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     Epetra_Map const& OperatorRangeMap() const;
 
     /// Restrict a given vector to size of this TRANSPORT_OPERATOR object.
-    void Restrict_vector(Epetra_MultiVector &x) const;
+    Epetra_MultiVector Restrict_vector(Epetra_MultiVector &x) const;
 
     /// Project and add a given vector y from a coarser TRANSPORT_OPERATOR 
     /// object to x. x and y are the same on output.
@@ -117,6 +117,8 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     unsigned int lvl;
     /// Maximum level in the angular multigrid.
     unsigned int max_lvl;
+    /// Number of degrees of freedom associated to the problem.
+    const unsigned int n_dof;
     /// Epetra communicator.
     Epetra_Comm const* comm;
     /// Epetra map

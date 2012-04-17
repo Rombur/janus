@@ -6,6 +6,7 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   Epetra_Operator(),
   lvl(0),
   max_lvl(0),
+  n_dof(dof->Get_n_dof()),
   comm(comm),
   flux_moments_map(flux_moments_map),
   scattering_src(NULL),
@@ -33,6 +34,7 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   Epetra_Operator(),
   lvl(level),
   max_lvl(max_level),
+  n_dof(dof->Get_n_dof()),
   comm(comm),
   flux_moments_map(flux_moments_map),
   scattering_src(NULL),
@@ -66,7 +68,6 @@ TRANSPORT_OPERATOR::~TRANSPORT_OPERATOR()
 
 int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y) const
 {
-  const unsigned int n_dof(dof_handler->Get_n_dof());
   y = x;
 
   if (param->Get_multigrid()==true)
@@ -78,11 +79,13 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
       TRANSPORT_OPERATOR coarse_transport(dof_handler,param,quad_vector,comm,
           &coarse_map,lvl+1,max_lvl,precond);
 
-      coarse_transport.Restrict_vector(y);
-      coarse_transport.Apply(x,y);
+      Epetra_MultiVector coarse_y(coarse_transport.Restrict_vector(y));
+      Epetra_MultiVector coarse_x(coarse_y);
+      coarse_transport.Apply(coarse_x,coarse_y);
 
-      // Project y on z. z and y are the same vectors on output
-      Project_vector(z,y);
+      // Project y on z. 
+      Project_vector(z,coarse_y);
+      y = z;
 
       // Compute the scattering source
       Compute_scattering_source(y);
@@ -113,7 +116,7 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
     Compute_scattering_source(y);
     Sweep(y);
 
-    for (unsigned int i=0; i<y.MyLength(); ++i)
+    for (int i=0; i<y.MyLength(); ++i)
       y[0][i] = z[0][i]-y[0][i];
   }  
 
@@ -122,8 +125,6 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
 
 void TRANSPORT_OPERATOR::Apply_preconditioner(Epetra_MultiVector &x) 
 {
-  const unsigned int n_dof(dof_handler->Get_n_dof());
-
   if (lvl!=max_lvl-1)
   {
     Epetra_MultiVector y(x);
@@ -131,11 +132,11 @@ void TRANSPORT_OPERATOR::Apply_preconditioner(Epetra_MultiVector &x)
     TRANSPORT_OPERATOR coarse_transport(dof_handler,param,quad_vector,comm,
         &coarse_map,lvl+1,max_lvl,precond);
 
-    coarse_transport.Restrict_vector(y);
-    coarse_transport.Apply_preconditioner(y);
+    Epetra_MultiVector coarse_y(coarse_transport.Restrict_vector(y));
+    coarse_transport.Apply_preconditioner(coarse_y);
 
-    // Project y on z. z and y are the same on output
-    Project_vector(x,y);
+    // Project y on x. 
+    Project_vector(x,coarse_y);
 
     if (lvl!=0)
     {
@@ -158,7 +159,6 @@ void TRANSPORT_OPERATOR::Apply_preconditioner(Epetra_MultiVector &x)
 void TRANSPORT_OPERATOR::Compute_scattering_source(Epetra_MultiVector const &x) const
 {
   const unsigned int n_mom(quad->Get_n_mom());
-  const unsigned int n_dof(dof_handler->Get_n_dof());
   // Reinitialize the scattering source
   for (unsigned int i=0; i<n_mom; ++i)
     for (unsigned int j=0; j<n_dof; ++j)
@@ -168,19 +168,19 @@ void TRANSPORT_OPERATOR::Compute_scattering_source(Epetra_MultiVector const &x) 
   vector<CELL*>::iterator cell_end(dof_handler->Get_mesh_end());
   for (; cell<cell_end; ++cell)
   {
+    const unsigned int j_min((*cell)->Get_first_dof());
+    const unsigned int j_max((*cell)->Get_last_dof());
+    FINITE_ELEMENT const* const fe((*cell)->Get_fe());
+    unsigned int dof_per_cell(fe->Get_dof_per_cell());
+    Teuchos::SerialDenseVector<int,double> x_cell(dof_per_cell);
+    Teuchos::SerialDenseVector<int,double> scat_src_cell(dof_per_cell);
+    Teuchos::SerialDenseMatrix<int,double> const* const mass_matrix(
+        fe->Get_mass_matrix());
+    Teuchos::BLAS<int,double> blas;
     for (unsigned int i=0; i<n_mom; ++i)
     {
-      const unsigned int j_min((*cell)->Get_first_dof());
-      const unsigned int j_max((*cell)->Get_last_dof());
-      FINITE_ELEMENT const* const fe((*cell)->Get_fe());
-      unsigned int dof_per_cell(fe->Get_dof_per_cell());
-      Teuchos::SerialDenseVector<int,double> x_cell(dof_per_cell);
-      Teuchos::SerialDenseVector<int,double> scat_src_cell(dof_per_cell);
-      Teuchos::SerialDenseMatrix<int,double> const* const mass_matrix(
-          fe->Get_mass_matrix());
-      Teuchos::BLAS<int,double> blas;
       for (unsigned int j=j_min; j<j_max; ++j)
-        x_cell(j-j_min) = x[0][j];
+        x_cell(j-j_min) = x[0][i*n_dof+j];
       blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
           (*cell)->Get_sigma_s(lvl,i),mass_matrix->values(),
           mass_matrix->stride(),x_cell.values(),1,0.,scat_src_cell.values(),1);
@@ -195,7 +195,6 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
   const unsigned int n_cells(dof_handler->Get_n_cells());
   const unsigned int n_dir(quad->Get_n_dir());
   const unsigned int n_mom(quad->Get_n_mom());
-  const unsigned int n_dof(dof_handler->Get_n_dof());
   Teuchos::SerialDenseMatrix<int,double> const* const M2D(quad->Get_M2D());
   Teuchos::SerialDenseMatrix<int,double> const* const D2M(quad->Get_D2M());
   Epetra_Map psi_map(n_dof,0,*comm);
@@ -206,7 +205,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
     flux_moments[0][i] = 0.;
   // Loop on the direction
   for (unsigned int idir=0; idir<n_dir; ++idir)
-  {
+  { 
     Epetra_MultiVector psi(psi_map,1);
     // Get the direction
     Teuchos::SerialDenseVector<int,double> omega(quad->Get_omega_2d(idir));
@@ -243,7 +242,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
         // Divide the source by 4 PI so the input source is easier to set
         for (unsigned int j=0; j<dof_per_cell; ++j)
           for (unsigned int k=0; k<dof_per_cell; ++k)
-            b(j) += cell->Get_source()*(*mass_matrix)(j,k);///(4.*M_PI);
+            b(j) += cell->Get_source()*(*mass_matrix)(j,k)/(4.*M_PI);
       }
       // Surfacic terms
       bool reflective_b(false);
@@ -271,14 +270,17 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
               upwind_cell = dof_handler->Get_cell((*cell_edge)->Get_cell_index(1));
             else
               upwind_cell = dof_handler->Get_cell((*cell_edge)->Get_cell_index(0));
+            FINITE_ELEMENT const* const upwind_fe(upwind_cell->Get_fe());
             const unsigned int j_min(upwind_cell->Get_first_dof());
             const unsigned int j_max(upwind_cell->Get_last_dof());
-            Teuchos::SerialDenseVector<int,double> psi_cell(fe->Get_dof_per_cell());
+            Teuchos::SerialDenseVector<int,double> psi_cell(
+                upwind_fe->Get_dof_per_cell());
             Teuchos::SerialDenseMatrix<int,double> const* const upwind(
                 fe->Get_upwind_matrix(edge_lid));
             for (unsigned int j=j_min; j<j_max; ++j)
               psi_cell(j-j_min) = psi[0][j];
-            blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,-n_dot_omega,
+
+            blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,j_max-j_min,-n_dot_omega,
                 upwind->values(),upwind->stride(),psi_cell.values(),1,1.,
                 b.values(),1);
           }                                                                         
@@ -290,20 +292,20 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
             {
               double inc_flux_norm(0.);
               if (((*cell_edge)->Get_edge_type()==bottom_boundary) &&
-                  (dof_handler->Is_most_normal_bottom(lvl,(*cell_edge)->Get_gid())))
+                  (dof_handler->Is_most_normal_bottom(lvl,idir)))
                 inc_flux_norm = param->Get_inc_bottom();
               if (((*cell_edge)->Get_edge_type()==right_boundary) &&
-                  (dof_handler->Is_most_normal_right(lvl,(*cell_edge)->Get_gid())))
+                  (dof_handler->Is_most_normal_right(lvl,idir)))
                 inc_flux_norm = param->Get_inc_right();
               if (((*cell_edge)->Get_edge_type()==top_boundary) &&
-                  (dof_handler->Is_most_normal_top(lvl,(*cell_edge)->Get_gid())))
+                  (dof_handler->Is_most_normal_top(lvl,idir)))
                 inc_flux_norm = param->Get_inc_top();
               if (((*cell_edge)->Get_edge_type()==left_boundary) &&
-                  (dof_handler->Is_most_normal_left(lvl,(*cell_edge)->Get_gid())))
+                  (dof_handler->Is_most_normal_left(lvl,idir)))
                 inc_flux_norm = param->Get_inc_left();
               for (unsigned int j=0; j<dof_per_cell; ++j)
                 for (unsigned int k=0; k<dof_per_cell; ++k)
-                  b(j) -= n_dot_omega*inc_flux_norm*(*downwind)(j,k);
+                  b(j) -= n_dot_omega*inc_flux_norm*(*downwind)(j,k)/(4.*M_PI);
             }
             if ((*cell_edge)->Is_reflective()==true)
             {
@@ -457,7 +459,7 @@ Epetra_Map const& TRANSPORT_OPERATOR::OperatorRangeMap() const
   return *flux_moments_map;
 }
 
-void TRANSPORT_OPERATOR::Restrict_vector(Epetra_MultiVector &x) const
+Epetra_MultiVector TRANSPORT_OPERATOR::Restrict_vector(Epetra_MultiVector &x) const
 {
   const unsigned int i_max(dof_handler->Get_n_dof()*quad->Get_n_mom());
   Epetra_MultiVector restriction(*flux_moments_map,1);
@@ -466,7 +468,7 @@ void TRANSPORT_OPERATOR::Restrict_vector(Epetra_MultiVector &x) const
     // With Galerkin some moments needs to be skipped because of the selection
     // rules
     double sn(-1.+sqrt(1.+2.*quad->Get_n_dir()));
-    const unsigned int copy((pow(sn,2.)-1.)/2.*dof_handler->Get_n_dof());
+    const unsigned int copy((pow(sn,2.)+sn)/2.*dof_handler->Get_n_dof());
     const unsigned int skip((sn/2.+1.)*dof_handler->Get_n_dof());
     for (unsigned int i=0; i<copy; ++i)
       restriction[0][i] = x[0][i];
@@ -478,7 +480,8 @@ void TRANSPORT_OPERATOR::Restrict_vector(Epetra_MultiVector &x) const
     for (unsigned int i=0; i<i_max; ++i)
       restriction[0][i] = x[0][i];
   }
-  x = restriction;
+   
+  return restriction;
 }
 
 void TRANSPORT_OPERATOR::Project_vector(Epetra_MultiVector &x,Epetra_MultiVector &y)
@@ -503,6 +506,4 @@ void TRANSPORT_OPERATOR::Project_vector(Epetra_MultiVector &x,Epetra_MultiVector
     for (unsigned int i=0; i<y_size; ++i)
       x[0][i] += y[0][i];
   }
-
-  y = x;
 }

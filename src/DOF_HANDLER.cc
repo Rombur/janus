@@ -113,6 +113,7 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
             ((edge->Get_edge_type()==bottom_boundary) && (omega(1)>0.)) ||
             ((edge->Get_edge_type()==top_boundary) && (omega(1)<0.)))
           incoming_edges.push_back(edge->Get_gid());
+        
       }
       while (incoming_edges.size()!=0)
       {

@@ -36,42 +36,42 @@ int main(int argc,char** argv)
 
   // Reference solution
   d_vector solution(36,0.);
-  solution[0] = sqrt_4pi * 0.974449442413;
-  solution[1] = sqrt_4pi * 0.97444944203;
-  solution[2] = sqrt_4pi * 1.66326834888;
-  solution[3] = sqrt_4pi * 1.66326833258;
-  solution[4] = sqrt_4pi * 0.974449442389;
-  solution[5] = sqrt_4pi * 0.974449442389;
-  solution[6] = sqrt_4pi * 1.66326834662;
-  solution[7] = sqrt_4pi * 1.66326834662;
-  solution[8] = sqrt_4pi * 0.97444944209;
-  solution[9] = sqrt_4pi * 0.974449442413;
-  solution[10] = sqrt_4pi * 1.66326833258;
-  solution[11] = sqrt_4pi * 1.66326834888;
-  solution[12] = sqrt_4pi * 1.66833181666;
-  solution[13] = sqrt_4pi * 1.6683318057;
-  solution[14] = sqrt_4pi * 1.6683318057;
-  solution[15] = sqrt_4pi * 1.66833181666;
-  solution[16] = sqrt_4pi * 1.66833180693;
-  solution[17] = sqrt_4pi * 1.66833180693;
-  solution[18] = sqrt_4pi * 1.66833180693;
-  solution[19] = sqrt_4pi * 1.66833180693;
-  solution[20] = sqrt_4pi * 1.6683318057;
-  solution[21] = sqrt_4pi * 1.66833181666;
-  solution[22] = sqrt_4pi * 1.66833181666;
-  solution[23] = sqrt_4pi * 1.6683318057;
-  solution[24] = sqrt_4pi * 1.66326833258;
-  solution[25] = sqrt_4pi * 1.66326834888;
-  solution[26] = sqrt_4pi * 0.97444944209;
-  solution[27] = sqrt_4pi * 0.974449442413;
-  solution[28] = sqrt_4pi * 1.66326834662;
-  solution[29] = sqrt_4pi * 1.66326834662;
-  solution[30] = sqrt_4pi * 0.974449442389;
-  solution[31] = sqrt_4pi * 0.974449442389;
-  solution[32] = sqrt_4pi * 1.66326834888;
-  solution[33] = sqrt_4pi * 1.66326834888;
-  solution[34] = sqrt_4pi * 0.974449442413;
-  solution[35] = sqrt_4pi * 0.97444944209;
+  solution[0] = 0.974449442413;
+  solution[1] = 0.97444944203;
+  solution[2] = 1.66326834888;
+  solution[3] = 1.66326833258;
+  solution[4] = 0.974449442389;
+  solution[5] = 0.974449442389;
+  solution[6] = 1.66326834662;
+  solution[7] = 1.66326834662;
+  solution[8] = 0.97444944209;
+  solution[9] = 0.974449442413;
+  solution[10] = 1.66326833258;
+  solution[11] = 1.66326834888;
+  solution[12] = 1.66833181666;
+  solution[13] = 1.6683318057;
+  solution[14] = 1.6683318057;
+  solution[15] = 1.66833181666;
+  solution[16] = 1.66833180693;
+  solution[17] = 1.66833180693;
+  solution[18] = 1.66833180693;
+  solution[19] = 1.66833180693;
+  solution[20] = 1.6683318057;
+  solution[21] = 1.66833181666;
+  solution[22] = 1.66833181666;
+  solution[23] = 1.6683318057;
+  solution[24] = 1.66326833258;
+  solution[25] = 1.66326834888;
+  solution[26] = 0.97444944209;
+  solution[27] = 0.974449442413;
+  solution[28] = 1.66326834662;
+  solution[29] = 1.66326834662;
+  solution[30] = 0.974449442389;
+  solution[31] = 0.974449442389;
+  solution[32] = 1.66326834888;
+  solution[33] = 1.66326834888;
+  solution[34] = 0.974449442413;
+  solution[35] = 0.97444944209;
 
   TRIANGULATION triangulation(&geometry_inp);
   PARAMETERS parameters(&parameters_inp);
@@ -123,7 +123,7 @@ int main(int argc,char** argv)
   precond->Solve(flux_moments);
 
   for (unsigned int i=0; i<dof_handler.Get_n_dof(); ++i)
-    assert(fabs(flux_moments[0][i]-solution[i])<0.0001);
+    assert(fabs(sqrt_4pi*flux_moments[0][i]-solution[i])<0.0001);
   
   delete quad[0];
   quad[0] = NULL;

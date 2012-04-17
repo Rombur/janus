@@ -172,7 +172,10 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   if (transport_correction==true && optimal==false)
     correction_vector.resize(n_mat,0.);
   sigma_t.resize(n_mat);
-  sigma_s.resize(n_mat,d_vector(L_max+1,0.));
+  unsigned int j_max(0);
+  for (unsigned int jj=0; jj<=L_max; ++jj)
+    j_max += jj+1;
+  sigma_s.resize(n_mat,d_vector(j_max,0.));
   if (fokker_planck==true)
     alpha.resize(n_mat);
   for (unsigned int i=0; i<n_mat; ++i)
@@ -181,8 +184,8 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     if (fokker_planck==true)
       parameters_file>>alpha[i];
     else
-    {
-      for (unsigned int j=0; j<=L_max; ++j)
+    {                               
+      for (unsigned int j=0; j<j_max; ++j)
         parameters_file>>sigma_s[i][j];
       if (transport_correction==true && optimal==false)
         parameters_file>>correction_vector[i];
@@ -218,7 +221,7 @@ void PARAMETERS::Apply_parameters(const unsigned int n_mat,
       double L_2(ceil(L/2.));
       sigma_t_lvl[i_mat][lvl] = sigma_t[i_mat];
       sigma_s_lvl[i_mat][lvl] = d_vector(sigma_s[i_mat].begin(),
-          sigma_s[i_mat].begin()+L+1);
+          sigma_s[i_mat].end());
       // Apply the transport correction
       if (transport_correction==true)
       {
@@ -240,10 +243,17 @@ void PARAMETERS::Apply_parameters(const unsigned int n_mat,
 }
 
 void PARAMETERS::Build_fokker_planck_xs(const unsigned int n_mat)
-{
+{               
   for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
+  {
+    unsigned int index(0);
     for (unsigned int l=0; l<L_max; ++l)
-      sigma_s[i_mat][l] = alpha[i_mat]/2.*(L_max*(L_max+1)-l*(l+1));
+      for (unsigned int m=0; m<=l; ++m)
+      {
+        sigma_s[i_mat][index] = alpha[i_mat]/2.*(L_max*(L_max+1)-l*(l+1));
+        ++index;
+      }
+  }
 }
 
 void PARAMETERS::Apply_transport_correction(unsigned int i_mat,unsigned int lvl,
@@ -254,7 +264,14 @@ void PARAMETERS::Apply_transport_correction(unsigned int i_mat,unsigned int lvl,
     if (L==0.)
       correction = 0.;
     else
-      correction = (sigma_s_lvl[i_mat][lvl][L]+sigma_s_lvl[i_mat][lvl].back())/2.;
+    {
+      if (L==1.)
+        L = 0.;
+      unsigned int pos(0);
+      for (unsigned int jj=0; jj<=L; ++jj)
+        pos += jj+1;
+      correction = (sigma_s_lvl[i_mat][lvl][pos]+sigma_s_lvl[i_mat][lvl].back())/2.;
+    }
   }
   
   sigma_t_lvl[i_mat][lvl] -= correction;

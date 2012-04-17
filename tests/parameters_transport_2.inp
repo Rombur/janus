@@ -1,0 +1,20 @@
+GMRES 1e-06 10000 0
+true
+true
+true
+true
+true
+CG_ML
+MIS
+GLC
+true
+8
+8
+PWLD
+0.0 1.0 
+0.0
+0.0
+0.0
+1.0
+36.0 1.0
+72.0 0.5

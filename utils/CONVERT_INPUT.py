@@ -255,7 +255,7 @@ class CONVERT_INPUT(object) :
         if self.aggregation=="uncoupled" :
           output_file.write("Uncoupled\n")
         elif self.aggregation=="mis" :
-          output_file.write("MIS")
+          output_file.write("MIS\n")
         elif self.aggregation=="uncoupled-mis" :
           output_file.write("Uncoupled_MIS\n")
         else :

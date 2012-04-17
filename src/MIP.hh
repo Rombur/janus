@@ -70,6 +70,9 @@ class MIP
     /// Solve the MIP equation and add the solution to the flux moments.
     void Solve(Epetra_MultiVector &flux_moments);
 
+    /// Delete the ML object before MPI_Finalize() is called.
+    void Free_ml();
+
     /// Return the time needed to build the matrix.
     double Get_building_mip_time() const;
 
