@@ -58,6 +58,9 @@ class DOF_HANDLER
     /// Return the number of degrees of freedom.
     unsigned int Get_n_dof() const;
 
+    /// Return the largest number of degrees of freedom per cell in the mesh.
+    unsigned int Get_max_dof_per_cell() const; 
+
     /// Return the number of cells.
     unsigned int Get_n_cells() const;
 
@@ -100,6 +103,8 @@ class DOF_HANDLER
     unsigned int n_sf_per_dir;
     /// Number of degrees of freedoms.
     unsigned int n_dof;
+    /// Maximum number of degrees of freedom per cell.
+    unsigned int max_dof_per_cell;
     /// Significant angular fluxes map of the dof: the key is the cell id and the 
     /// value is the index of the first basis function.
     ui_map saf_map_dof;
@@ -154,6 +159,11 @@ inline unsigned int DOF_HANDLER::Get_n_sf_per_dir() const
 inline unsigned int DOF_HANDLER::Get_n_dof() const
 {
   return n_dof;
+}
+
+inline unsigned int DOF_HANDLER::Get_max_dof_per_cell() const
+{
+  return max_dof_per_cell;
 }
 
 inline unsigned int DOF_HANDLER::Get_n_cells() const

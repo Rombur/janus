@@ -15,6 +15,11 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   param(param),
   quad(quad)
 {
+  // Adapt the size of teucho_vector
+  teuchos_vector.resize(dof_handler->Get_max_dof_per_cell());
+  for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
+    teuchos_vector[i] = new Teuchos::SerialDenseVector<int,double> (i);
+
   scattering_src = new vector<Teuchos::SerialDenseVector<int,double> >
     (quad->Get_n_mom(),Teuchos::SerialDenseVector<int,double> 
      (dof_handler->Get_n_dof()));
@@ -44,6 +49,11 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   quad((*quad_vector)[lvl]),
   quad_vector(quad_vector)
 {
+  // Adapt the size of teucho_vector
+  teuchos_vector.resize(dof_handler->Get_max_dof_per_cell());
+  for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
+    teuchos_vector[i] = new Teuchos::SerialDenseVector<int,double> (i);
+
   scattering_src = new vector<Teuchos::SerialDenseVector<int,double> >
     (quad->Get_n_mom(),Teuchos::SerialDenseVector<int,double> 
      (dof_handler->Get_n_dof()));
@@ -63,6 +73,12 @@ TRANSPORT_OPERATOR::~TRANSPORT_OPERATOR()
   {
     delete scattering_src;
     scattering_src = NULL;
+  }
+
+  for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
+  {
+    delete teuchos_vector[i];
+    teuchos_vector[i] = NULL;
   }
 }
 
@@ -173,19 +189,20 @@ void TRANSPORT_OPERATOR::Compute_scattering_source(Epetra_MultiVector const &x) 
     FINITE_ELEMENT const* const fe((*cell)->Get_fe());
     unsigned int dof_per_cell(fe->Get_dof_per_cell());
     Teuchos::SerialDenseVector<int,double> x_cell(dof_per_cell);
-    Teuchos::SerialDenseVector<int,double> scat_src_cell(dof_per_cell);
+    Teuchos::SerialDenseVector<int,double>* scat_src_cell(
+        teuchos_vector[dof_per_cell]);
     Teuchos::SerialDenseMatrix<int,double> const* const mass_matrix(
         fe->Get_mass_matrix());
     Teuchos::BLAS<int,double> blas;
     for (unsigned int i=0; i<n_mom; ++i)
     {
       for (unsigned int j=j_min; j<j_max; ++j)
-        x_cell(j-j_min) = x[0][i*n_dof+j];
+        x_cell.values()[j-j_min] = x[0][i*n_dof+j];
       blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
           (*cell)->Get_sigma_s(lvl,i),mass_matrix->values(),
-          mass_matrix->stride(),x_cell.values(),1,0.,scat_src_cell.values(),1);
+          mass_matrix->stride(),x_cell.values(),1,0.,scat_src_cell->values(),1);
       for (unsigned int j=j_min; j<j_max; ++j)
-        (*scattering_src)[i](j) += scat_src_cell(j-j_min);
+        (*scattering_src)[i].values()[j] += scat_src_cell->values()[j-j_min];
     }
   }
 }
@@ -209,6 +226,8 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
     Epetra_MultiVector psi(psi_map,1);
     // Get the direction
     Teuchos::SerialDenseVector<int,double> omega(quad->Get_omega_2d(idir));
+    const double omega_0(omega(0));
+    const double omega_1(omega(1));
     
     // Sweep on the spatial cells
     ui_vector const* const sweep_order(dof_handler->Get_sweep_order(lvl,idir));
@@ -217,32 +236,42 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
       CELL* cell(dof_handler->Get_cell((*sweep_order)[i]));
       FINITE_ELEMENT const* const fe(cell->Get_fe());
       const unsigned int dof_per_cell(fe->Get_dof_per_cell());
+      const unsigned int dof_per_cell_square(dof_per_cell*dof_per_cell);
       const unsigned int offset(cell->Get_first_dof());
       Teuchos::SerialDenseVector<int,double> b(dof_per_cell);
-      Teuchos::SerialDenseMatrix<int,double> A(*(fe->Get_x_grad_matrix()));
-      Teuchos::SerialDenseMatrix<int,double> tmp(*(fe->Get_y_grad_matrix()));
       Teuchos::SerialDenseMatrix<int,double> const* const mass_matrix(
           fe->Get_mass_matrix());
+      Teuchos::SerialDenseMatrix<int,double> const* const x_grad_matrix(
+          fe->Get_x_grad_matrix());
+      Teuchos::SerialDenseMatrix<int,double> const* const y_grad_matrix(
+          fe->Get_y_grad_matrix());
+      Teuchos::SerialDenseMatrix<int,double> A(*(fe->Get_mass_matrix()));
       
       // Volumetric term of the lhs : 
       // -omega_x * x_grad_matrix - omega_y *y_grad_matrix + sigma_t mass
-      A *= -omega(0);
-      tmp *= -omega(1);
-      A += tmp;
-      tmp = *mass_matrix;
-      tmp *= cell->Get_sigma_t(lvl);
-      A += tmp;
+      A.scale(cell->Get_sigma_t(lvl));
+      for (unsigned int i=0; i<dof_per_cell_square; ++i)
+        A.values()[i] += -omega_0*x_grad_matrix->values()[i]-omega_1*
+          y_grad_matrix->values()[i];
 
       // Volumetric term of the rhs
       for (unsigned int mom=0; mom<n_mom; ++mom)
+      {
+        const double m2d((*M2D)(idir,mom));
+        double* scat_src_val((*scattering_src)[mom].values());
         for (unsigned int j=0; j<dof_per_cell; ++j)
-          b(j) += (*M2D)(idir,mom)*(*scattering_src)[mom](offset+j);
+          b.values()[j] += m2d*scat_src_val[offset+j];
+      }
       if (rhs==true)
       {
         // Divide the source by 4 PI so the input source is easier to set
-        for (unsigned int j=0; j<dof_per_cell; ++j)
-          for (unsigned int k=0; k<dof_per_cell; ++k)
-            b(j) += cell->Get_source()*(*mass_matrix)(j,k)/(4.*M_PI);
+        const double src(cell->Get_source()/(4.*M_PI));
+        for (unsigned int k=0; k<dof_per_cell; ++k)
+        {
+          double const* mass_matrix_k((*mass_matrix)[k]);
+          for (unsigned int j=0; j<dof_per_cell; ++j)
+              b.values()[j] += src*mass_matrix_k[j];
+        }
       }
       // Surfacic terms
       bool reflective_b(false);
@@ -273,15 +302,15 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
             FINITE_ELEMENT const* const upwind_fe(upwind_cell->Get_fe());
             const unsigned int j_min(upwind_cell->Get_first_dof());
             const unsigned int j_max(upwind_cell->Get_last_dof());
-            Teuchos::SerialDenseVector<int,double> psi_cell(
-                upwind_fe->Get_dof_per_cell());
+            Teuchos::SerialDenseVector<int,double>* psi_cell(
+                teuchos_vector[upwind_fe->Get_dof_per_cell()]);
             Teuchos::SerialDenseMatrix<int,double> const* const upwind(
                 fe->Get_upwind_matrix(edge_lid));
             for (unsigned int j=j_min; j<j_max; ++j)
-              psi_cell(j-j_min) = psi[0][j];
+              psi_cell->values()[j-j_min] = psi[0][j];
 
             blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,j_max-j_min,-n_dot_omega,
-                upwind->values(),upwind->stride(),psi_cell.values(),1,1.,
+                upwind->values(),upwind->stride(),psi_cell->values(),1,1.,
                 b.values(),1);
           }                                                                         
           else
@@ -303,9 +332,12 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
               if (((*cell_edge)->Get_edge_type()==left_boundary) &&
                   (dof_handler->Is_most_normal_left(lvl,idir)))
                 inc_flux_norm = param->Get_inc_left();
-              for (unsigned int j=0; j<dof_per_cell; ++j)
-                for (unsigned int k=0; k<dof_per_cell; ++k)
-                  b(j) -= n_dot_omega*inc_flux_norm*(*downwind)(j,k)/(4.*M_PI);
+              inc_flux_norm /= 4.*M_PI;
+              Teuchos::SerialDenseVector<int,double> inc_flux(dof_per_cell);
+              inc_flux.putScalar(inc_flux_norm);
+              blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,-n_dot_omega,
+                  downwind->values(),downwind->stride(),inc_flux.values(),1,1.,
+                  b.values(),1);
             }
             if ((*cell_edge)->Is_reflective()==true)
             {
@@ -321,10 +353,10 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
         else
         {
           // Downwind
-          Teuchos::SerialDenseMatrix<int,double> tmp(
-              *(fe->Get_downwind_matrix(edge_lid)));
-          tmp *= n_dot_omega;
-          A += tmp;
+          Teuchos::SerialDenseMatrix<int,double> const* const downwind(
+              fe->Get_downwind_matrix(edge_lid));
+          for (unsigned int i=0; i<dof_per_cell_square; ++i)
+            A.values()[i] += n_dot_omega*downwind->values()[i];
         }
         ++edge_lid;
       }
@@ -341,7 +373,8 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
       const unsigned int j_min(cell->Get_first_dof());
       const unsigned int j_max(cell->Get_last_dof());
       for (unsigned int j=j_min; j<j_max; ++j)
-        psi[0][j] = b(j-j_min);
+        psi[0][j] = b.values()[j-j_min];
+      
       if (reflective_b==true)
         Store_saf(psi,flux_moments,cell,idir,n_mom,dof_per_cell);
     }
@@ -349,8 +382,9 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
     for (unsigned int mom=0; mom<n_mom; ++mom)
     {
       const unsigned int offset(mom*n_dof);
+      const double d2m((*D2M)(mom,idir));
       for (unsigned int j=0; j<n_dof; ++j)
-        flux_moments[0][j+offset] += (*D2M)(mom,idir)*psi[0][j];
+        flux_moments[0][j+offset] += d2m*psi[0][j];
     }
   }
 }
@@ -411,7 +445,7 @@ Teuchos::SerialDenseVector<int,double> TRANSPORT_OPERATOR::Get_saf(
     reflec_dir*dof_handler->Get_n_sf_per_dir();
   
   for (unsigned int i=0; i<dof_per_cell; ++i)
-    values[i] = flux_moments[0][offset+i];
+    values.values()[i] = flux_moments[0][offset+i];
 
   return values;
 }

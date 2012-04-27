@@ -75,8 +75,8 @@ MIP::~MIP()
     int iter(parameters->Get_max_it());
     int nrest(1);
     double tol(parameters->Get_tolerance()/100.);
-    double* f;
-    double* x;
+    double* f(NULL);
+    double* x(NULL);
     dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
     delete a;
     a = NULL;
@@ -228,8 +228,6 @@ void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
           const double n_dot_omega(omega.dot(*external_normal));
           if (n_dot_omega>0.)
           {
-            unsigned int offset(dof_handler->Get_n_dof()*quad->Get_n_mom()+
-                idir*dof_handler->Get_n_sf_per_dir());
             blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
                 (*D2M)(0,idir),downwind_matrix->values(),
                 downwind_matrix->stride(),x_cell.values(),1,1.,b_cell.values(),1);
@@ -691,7 +689,6 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   double* f;
   double* x;
   Epetra_MultiVector epetra_x(*mip_map,1);
-
   x = new double [n];
   f = new double [n];
   
@@ -716,8 +713,8 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   solve_timer->stop();
 
   // Convert the righ-hand side to Epetra
-  Convert_rhs_to_epetra(flux_moments,x,n);
-
+  Convert_rhs_to_epetra(epetra_x,x,n);
+  
   // Project the solution
   Project_solution(flux_moments,epetra_x);
 
@@ -764,9 +761,9 @@ void MIP::Convert_lhs_to_fortran(int* &ia,int* &ja,double* &a,unsigned int n_dof
 
     for (int j=0; j<n_entries; ++j)
     {
-      a[offset+j] = val[j];
+      a[offset-1+j] = val[j];
       // Fortran array starts at 1 not 0
-      ja[offset+j] = ind[j]+1;
+      ja[offset-1+j] = ind[j]+1;
     }
 
     offset += n_entries;

@@ -4,11 +4,11 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
     string* outputfile,Epetra_MpiComm* mpi_comm) :
   init_timer(NULL),
   calc_timer(NULL),
-  parameters(p_inputfile),
   outputfile(outputfile),
   comm(mpi_comm),
   flux_moments(NULL),
   flux_moments_map(NULL),
+  parameters(p_inputfile),
   triangulation(g_inputfile),
   dof_handler(NULL)
 {
@@ -19,14 +19,19 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
   init_timer->start();
   
   // Build the triangulation
+  cout<<"Start building the triangulation"<<endl;
   triangulation.Read_geometry();
   triangulation.Build_edges();
+  cout<<"Done building the triangulation"<<endl;
 
   // Read the parameters
+  cout<<"Start initializing the parameters"<<endl;
   parameters.Read_parameters(triangulation.Get_n_sources(),
       triangulation.Get_n_materials());
+  cout<<"Done initializing the parameters"<<endl;
 
   // Build the quadratures
+  cout<<"Start building the quadratures"<<endl;
   unsigned int n_lvl(parameters.Get_n_levels());
   unsigned int tmp_sn(parameters.Get_sn_order());
   unsigned int tmp_L_max(parameters.Get_L_max());
@@ -45,10 +50,13 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
     if (tmp_L_max>tmp_sn)
       tmp_L_max = tmp_sn;
   }                               
+  cout<<"Done building the quadratures"<<endl;
 
   // Build the dof handler
+  cout<<"Start building the dof handler"<<endl;
   dof_handler = new DOF_HANDLER(&triangulation,parameters);
   dof_handler->Compute_sweep_ordering(quad);
+  cout<<"Done building the dof handler"<<endl;
 
 
   // Instantiate the flux moments map and vector

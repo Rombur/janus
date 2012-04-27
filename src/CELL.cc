@@ -55,7 +55,6 @@ CELL::~CELL()
 vector<d_vector> CELL::Reorder_vertices()
 {
   unsigned int index(0);
-  const unsigned int dim(2);
   vector<d_vector const*> vertices_done;
   vector<d_vector> points(n_vertices,(d_vector(2,0.)));
   for (unsigned int i=0; i<n_vertices; ++i)
@@ -77,7 +76,7 @@ vector<d_vector> CELL::Reorder_vertices()
       {
         v1_done = true;
         if (j!=vertices_done_size-1)
-          v1_switch;
+          v1_switch = true;
       }
     }
     if (((v0_done==true) && (v0_switch==true) && (v1_done==false)) ||
@@ -114,7 +113,7 @@ void CELL::Compute_area_and_perimeter()
   for (int i=n_vertices-1; i>-1; --i)
   {
     int j(i+1);
-    if (i==n_vertices-1)
+    if (i==int(n_vertices-1))
       j=0;
     area += (reordered_vertices[j][0]+reordered_vertices[i][0])*
       (reordered_vertices[j][1]-reordered_vertices[i][1]);

@@ -123,6 +123,9 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     Epetra_Comm const* comm;
     /// Epetra map
     Epetra_Map const* flux_moments_map;
+    /// To speed up the sweep the Teuchos Vector are constructed in the
+    /// constructor and then reused in the sweep.
+    vector<Teuchos::SerialDenseVector<int,double>* > teuchos_vector;
     /// Scattering source for each moment.
     /// @todo Change the Teuchos::SerialDenseVector to Epetra_MultiVector.
     vector<Teuchos::SerialDenseVector<int,double> >* scattering_src;

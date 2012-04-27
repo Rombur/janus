@@ -3,6 +3,7 @@
 DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
   n_sf_per_dir(0),
   n_dof(0),
+  max_dof_per_cell(0),
   triangulation(triang)
 {
   unsigned int start_dof(0);
@@ -59,6 +60,8 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
           param.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
     mesh.push_back(cell);
     start_dof += fe->Get_dof_per_cell();
+    if (fe->Get_dof_per_cell()>max_dof_per_cell)
+      max_dof_per_cell = fe->Get_dof_per_cell();
   }
   // Build the finite elements of each cell
   for (unsigned int i=0; i<n_cells; ++i)
