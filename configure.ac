@@ -16,31 +16,31 @@ AC_PROG_CXX
 # Checks for header files.
 AC_ARG_WITH([gsl-include],
             [AS_HELP_STRING([--with-gsl-include],[location of the gsl headers])],
-            [GSL_CXXFLAGS="-I$/withval"],
+            [GSL_CXXFLAGS="-I$withval"],
             [GSL_CXXFLAGS='-I/usr/include/gsl'])
 AC_SUBST([GSL_CXXFLAGS])
 
 AC_ARG_WITH([trilinos-include],
            [AS_HELP_STRING([--with-trilinos-include],[location of the trilinos hearders])],
-           [TRILINOS_CXXFLAGS="-I$/withval"],
+           [TRILINOS_CXXFLAGS="-I$withval"],
            [TRILINOS_CXXFLAGS='-I/usr/include/trilinos'])
 AC_SUBST([TRILINOS_CXXFLAGS])
 
 AC_ARG_WITH([lapack-include],
            [AS_HELP_STRING([--with-lapack-include],[location of the lapack hearders])],
-           [LAPACK_CXXFLAGS="-I$/withval"],
+           [LAPACK_CXXFLAGS="-I$withval"],
            [LAPACK_CXXFLAGS=' '])
 AC_SUBST([LAPACK_CXXFLAGS])
 
 AC_ARG_WITH([blas-include],
            [AS_HELP_STRING([--with-blas-include],[location of the blas hearders])],
-           [BLAS_CXXFLAGS="-I$/withval"],
+           [BLAS_CXXFLAGS="-I$withval"],
            [BLAS_CXXFLAGS=' '])
 AC_SUBST([BLAS_CXXFLAGS])
 
 AC_ARG_WITH([mpi-include],
            [AS_HELP_STRING([--with-mpi-include],[location of the mpi hearders])],
-           [MPI_CXXFLAGS="-I$/withval"],
+           [MPI_CXXFLAGS="-I$withval"],
            [MPI_CXXFLAGS='-I/usr/include/mpi'])
 AC_SUBST([MPI_CXXFLAGS])
 

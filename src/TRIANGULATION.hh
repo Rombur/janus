@@ -2,6 +2,7 @@
 #define _TRIANGULATION_HH_
 
 #include <fstream>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -9,9 +10,12 @@
 
 using namespace std;
 
+typedef multimap<double,int> di_multimap;
+typedef pair<double,int> di_pair;
 typedef set<unsigned int> ui_set;
 typedef vector<unsigned int> ui_vector;
 typedef vector<double> d_vector;
+typedef vector<int> i_vector;
 
 /// Type of the cell: rectangle or arbitrary polygon.
 enum CELL_TYPE{rectangle,polygon};

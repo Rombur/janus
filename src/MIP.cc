@@ -77,7 +77,9 @@ MIP::~MIP()
     double tol(parameters->Get_tolerance()/100.);
     double* f(NULL);
     double* x(NULL);
+#ifdef AGMG
     dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
+#endif 
     delete a;
     a = NULL;
   }

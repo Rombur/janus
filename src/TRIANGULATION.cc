@@ -135,6 +135,8 @@ void TRIANGULATION::Build_edges()
 {
   unsigned int edge_gid(0);
   cell_to_edge_gid.resize(n_cells);
+  di_multimap vx_to_edge_pos;
+  di_multimap vy_to_edge_pos;
   // Loop over the cells.
   for (unsigned int i=0; i<n_cells; ++i)
   {
@@ -156,20 +158,65 @@ void TRIANGULATION::Build_edges()
       bool edge_exist(false);
       const unsigned int n_edges(edges.size());
       // Check that it is a new edge.
-      for (unsigned int j=0; j<n_edges; ++j)
-        if (edges[j].Has_same_coord(vertex_0,vertex_1))
+      ui_vector v_to_edge_pos(4,0);
+      v_to_edge_pos[0] = vx_to_edge_pos.count(vertex_0[0]);
+      v_to_edge_pos[1] = vy_to_edge_pos.count(vertex_0[1]);
+      v_to_edge_pos[2] = vx_to_edge_pos.count(vertex_1[0]);
+      v_to_edge_pos[3] = vy_to_edge_pos.count(vertex_1[1]);
+      if (v_to_edge_pos[0]*v_to_edge_pos[1]*v_to_edge_pos[2]*v_to_edge_pos[3]>0)
+      {
+        pair<di_multimap::iterator,di_multimap::iterator> min_v;
+        unsigned int pos(min_element(v_to_edge_pos.begin(),v_to_edge_pos.end())-
+            v_to_edge_pos.begin());
+        
+        switch (pos)
         {
-          edges[j].Set_cell_index(1,i);
-          cell_to_edge_gid[i].push_back(edges[j].Get_gid());
-          edge_exist = true;
-          break;
+          case 0:
+            {
+              min_v = vx_to_edge_pos.equal_range(vertex_0[0]);
+              break;
+            }
+          case 1:
+            {
+              min_v = vy_to_edge_pos.equal_range(vertex_0[1]);
+              break;
+            }
+          case 2:
+            {
+              min_v = vx_to_edge_pos.equal_range(vertex_1[0]);
+              break;
+            }
+          case 3:
+            {
+              min_v = vy_to_edge_pos.equal_range(vertex_1[1]);
+              break;
+            }
         }
+
+        // Loop over the smallest set of edges
+        di_multimap::iterator min_v_it(min_v.first);
+        for (; min_v_it!=min_v.second; ++min_v_it)
+          if (edges[min_v_it->second].Has_same_coord(vertex_0,vertex_1))
+          {
+            edges[min_v_it->second].Set_cell_index(1,i);
+            cell_to_edge_gid[i].push_back(edges[min_v_it->second].Get_gid());
+            edge_exist = true;
+            break;
+          }
+      }
+
       if (edge_exist==false)
       {
         EDGE_TYPE edge_type(Get_edge_type(vertex_0,vertex_1));
         edges.push_back(EDGE(edge_type,edge_gid,vertex_0,vertex_1));
         edges[n_edges].Set_cell_index(0,i);
         cell_to_edge_gid[i].push_back(edge_gid);
+        // Store the coordinates of the vertices and the edge_gid associated
+        // with the vertices
+        vx_to_edge_pos.insert(di_pair(vertex_0[0],edge_gid));
+        vy_to_edge_pos.insert(di_pair(vertex_0[1],edge_gid));
+        vx_to_edge_pos.insert(di_pair(vertex_1[0],edge_gid));
+        vy_to_edge_pos.insert(di_pair(vertex_1[1],edge_gid));
         ++edge_gid;
       }
     }
@@ -196,7 +243,8 @@ unsigned int TRIANGULATION::Get_n_sources() const
   return n_sources.size();
 }
 
-EDGE_TYPE TRIANGULATION::Get_edge_type(d_vector const &vertex_0,d_vector const &vertex_1)
+EDGE_TYPE TRIANGULATION::Get_edge_type(d_vector const &vertex_0,
+    d_vector const &vertex_1)
 {
   EDGE_TYPE edge_type;
   if (vertex_0[1]==bottom_value && vertex_1[1]==bottom_value)
