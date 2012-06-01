@@ -2,9 +2,9 @@
 #define _TRANSPORT_SOLVER_HH_
 
 #include <cassert>
+#include <cmath>
 #include <fstream>
 #include <string>
-#include "gsl_math.h"
 #include "AztecOO.h"
 #include "Epetra_BLAS.h"
 #include "Epetra_Map.h"

@@ -44,7 +44,7 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
       quad[lvl] = new LS(tmp_sn,tmp_L_max,parameters.Get_galerkin());
     else
       quad[lvl] = new GLC(tmp_sn,tmp_L_max,parameters.Get_galerkin());
-    quad[lvl]->Build_quadrature();
+    quad[lvl]->Build_quadrature(parameters.Get_weight_sum());
 
     tmp_sn = ceil(tmp_sn/2.);
     if (tmp_L_max>tmp_sn)
@@ -247,7 +247,6 @@ void TRANSPORT_SOLVER::Solve()
         transport_operator.Compute_scattering_source(*flux_moments);
         transport_operator.Sweep(*flux_moments,true);
 
-
         if (parameters.Get_mip()==true)
         {
           Epetra_MultiVector diff_flux(*flux_moments);
@@ -344,9 +343,10 @@ void TRANSPORT_SOLVER::Write_in_file()
   for (unsigned int i=0; i<n_values; ++i)
     file<<(*flux_moments)[0][i]<<"\n";
 
-  // To have the scalar flux phi_00 needs to be multiply by sqrt(4*PI)
+  // To have the scalar flux phi_00 needs to be multiply by sqrt(weight_sum)
+  const double weight_sum(parameters.Get_weight_sum());
   for (unsigned int i=0; i<n_dof; ++i)
-    file<<(*flux_moments)[0][i]*2.*M_SQRTPI<<"\n";
+    file<<(*flux_moments)[0][i]*sqrt(weight_sum)<<"\n";
 
   file.close();
 }

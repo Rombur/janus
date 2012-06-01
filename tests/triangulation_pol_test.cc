@@ -30,8 +30,8 @@ int main(int argc,char** argv)
   src_id[0] = 0;
   src_id[1] = 2;
   src_id[2] = 1;
-  // Need to use AT_DATA instead of hard coding the path
-  string filename("/home/bruno/Documents/Transport/janus/tests/geometry_pol.inp");
+
+  string filename("geometry_pol.inp");
 
   TRIANGULATION triangulation(&filename);
   triangulation.Read_geometry();

@@ -192,6 +192,7 @@ void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
   Teuchos::SerialDenseMatrix<int,double> const* const D2M(quad->Get_D2M());
   vector<CELL*>::iterator cell(dof_handler->Get_mesh_begin());
   vector<CELL*>::iterator cell_end(dof_handler->Get_mesh_end());
+  const unsigned int n_mom(quad->Get_n_mom());
 
   for (; cell<cell_end; ++cell)
   {
@@ -215,24 +216,32 @@ void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
 
     // Compute the reflective boundary term.
     for (; cell_edge<cell_edge_end; ++cell_edge)
-    {
-      if ((*cell_edge)->Is_reflective()==true)
+    {                
+      if ((*cell_edge)->Is_interior()==false)
       {
-        unsigned int edge_lid((*cell_edge)->Get_lid(0));
-        const unsigned int n_dir(quad->Get_n_dir());
-        Teuchos::SerialDenseVector<int,double> const* const external_normal(
-            (*cell_edge)->Get_external_normal(0));
-        Teuchos::SerialDenseMatrix<int,double> const* const downwind_matrix(
-            fe->Get_downwind_matrix(edge_lid));
-        for (unsigned int idir=0; idir<n_dir; ++idir)
+        if ((*cell_edge)->Get_bc_type()==reflective)
         {
-          Teuchos::SerialDenseVector<int,double> omega(quad->Get_omega_2d(idir));
-          const double n_dot_omega(omega.dot(*external_normal));
-          if (n_dot_omega>0.)
+          unsigned int edge_lid((*cell_edge)->Get_lid(0));
+          const unsigned int n_dir(quad->Get_n_dir());
+          Teuchos::SerialDenseVector<int,double> const* const external_normal(
+              (*cell_edge)->Get_external_normal(0));
+          Teuchos::SerialDenseMatrix<int,double> const* const downwind_matrix(
+              fe->Get_downwind_matrix(edge_lid));
+          for (unsigned int idir=0; idir<n_dir; ++idir)
           {
-            blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
-                (*D2M)(0,idir),downwind_matrix->values(),
-                downwind_matrix->stride(),x_cell.values(),1,1.,b_cell.values(),1);
+            Teuchos::SerialDenseVector<int,double> omega(quad->Get_omega_2d(idir));
+            const double n_dot_omega(omega.dot(*external_normal));
+            if (n_dot_omega>0.)
+            {                                      
+              const unsigned int offset(dof_handler->Get_n_dof()*n_mom+
+                  dof_handler->Get_saf_map_reflective_dof((*cell)->Get_id())+
+                  idir*dof_handler->Get_n_sf_per_dir());
+              for (unsigned int i=0; i<dof_per_cell; ++i)
+                x_cell(i) = x[0][offset+i];
+              blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
+                  n_dot_omega*(*D2M)(0,idir),downwind_matrix->values(),
+                  downwind_matrix->stride(),x_cell.values(),1,1.,b_cell.values(),1);
+            }
           }
         }
       }
@@ -269,7 +278,7 @@ void MIP::Build_lhs()
     for (unsigned int i=i_min; i<i_max; ++i)
     {
       for (unsigned int j=i_min; j<i_max; ++j)
-      {
+      {                                    
         values[j-i_min] = ((*cell)->Get_sigma_t(lvl)-(*cell)->Get_sigma_s(lvl,0))*
           (*mass_matrix)(i-i_min,j-i_min)+(*cell)->Get_diffusion_coefficient()*
           (*stiffness_matrix)(i-i_min,j-i_min);
@@ -438,7 +447,7 @@ void MIP::Build_lhs()
     {
       // The edge is on the boundary. If the edge is on a reflective boundary,
       // there is nothing to do.
-      if (edge->Is_reflective()==false)
+      if (edge->Get_bc_type()!=reflective)
       {
         const unsigned int edge_lid_0(edge->Get_lid(0));
         CELL* cell(dof_handler->Get_cell(edge->Get_cell_index(0)));
@@ -632,6 +641,8 @@ void MIP::Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
     else 
       if (parameters->Get_aggregation_type()==mis) 
         ml_list.set("aggregation: type","MIS");
+    if (parameters->Get_verbose()==2)
+      ml_list.set("ML output",10);
 
     // Construct the ML object and compute the hierarchy
     ml_prec = new ML_Epetra::MultiLevelPreconditioner(*A,ml_list,true);
@@ -729,16 +740,138 @@ void MIP::Project_solution(Epetra_MultiVector &flux_moments,
     Epetra_MultiVector const &x)
 {                    
   const unsigned int i_max(dof_handler->Get_n_dof());
+  const unsigned int n_dir(quad->Get_n_dir());
+  const unsigned int n_mom(quad->Get_n_mom());
+  Teuchos::SerialDenseMatrix<int,double> const* const M2D(quad->Get_M2D());
 
   if (parameters->Get_solver_type()==si)
   {
-    flux_moments.PutScalar(0.);
     for (unsigned int i=0; i<i_max; ++i)
       flux_moments[0][i] = x[0][i];
-  }
+    // Add the correction on the angular flux when there is reflective
+    // boundary
+    vector<EDGE>::iterator edge(dof_handler->Get_edges_begin());
+    vector<EDGE>::iterator edge_end(dof_handler->Get_edges_end());
+    for (; edge<edge_end; ++edge)
+    {  
+      if (edge->Is_interior()==false)
+      {
+        if (edge->Get_bc_type()==reflective)
+        {
+          CELL* cell(dof_handler->Get_cell(edge->Get_cell_index(0)));
+          const unsigned int dof_per_cell(cell->Get_last_dof()-
+              cell->Get_first_dof());
+          const double D(cell->Get_diffusion_coefficient());
+          for (unsigned int idir=0; idir<n_dir; ++idir)
+          {
+            const unsigned int offset_1(dof_handler->Get_n_dof()*n_mom+
+                dof_handler->Get_saf_map_reflective_dof(cell->Get_id())+
+                idir*dof_handler->Get_n_sf_per_dir());
+            const unsigned int offset_2(cell->Get_first_dof());
+            const double M2D0((*M2D)(idir,0));
+            if (n_mom==1)
+            {     
+              for (unsigned int j=0; j<dof_per_cell; ++j)
+                flux_moments[0][offset_1+j] = M2D0*x[0][offset_2+j];
+            }
+            else
+            {
+              const unsigned int edge_lid(edge->Get_lid(0));
+              Teuchos::SerialDenseVector<int,double> omega(quad->Get_omega_2d(idir));
+              const double omega_0(omega(0));
+              const double omega_1(omega(1));
+              const double M2D1((*M2D)(idir,1));
+              const double M2D2((*M2D)(idir,2));
+              FINITE_ELEMENT const* const fe(cell->Get_fe());
+              Teuchos::BLAS<int,double> blas;
+              Teuchos::SerialDenseMatrix<int,double> const* const x_grad(
+                  fe->Get_x_grad_matrix(edge_lid));
+              Teuchos::SerialDenseMatrix<int,double> const* const y_grad(
+                  fe->Get_y_grad_matrix(edge_lid));
+              Teuchos::SerialDenseVector<int,double> x_grad_correc(dof_per_cell);
+              Teuchos::SerialDenseVector<int,double> y_grad_correc(dof_per_cell);
+              Teuchos::SerialDenseVector<int,double> flux_correc(dof_per_cell);
+              for (unsigned int j=0; j<dof_per_cell; ++j)
+                flux_correc.values()[j] = x[0][offset_2+j];
+              blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,1.,
+                  x_grad->values(),x_grad->stride(),flux_correc.values(),1,0.,
+                  x_grad_correc.values(),1);
+              blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,1.,
+                  y_grad->values(),y_grad->stride(),flux_correc.values(),1,0.,
+                  y_grad_correc.values(),1);
+              for (unsigned int j=0; j<dof_per_cell; ++j)
+                flux_moments[0][offset_1+j] = M2D0*x[0][offset_2+j]-
+                  M2D1*D*omega_0*x_grad_correc(j)-M2D2*D*omega_1*y_grad_correc(j);
+            }
+          }
+        }
+      }
+    }
+  }           
   else
+  {
     for (unsigned int i=0; i<i_max; ++i)
       flux_moments[0][i] += x[0][i];
+    // Add the correction on the angular flux when there is reflective
+    // boundary
+    vector<EDGE>::iterator edge(dof_handler->Get_edges_begin());
+    vector<EDGE>::iterator edge_end(dof_handler->Get_edges_end());
+    for (; edge<edge_end; ++edge)
+    {  
+      if (edge->Is_interior()==false)
+      {
+        if (edge->Get_bc_type()==reflective)
+        {
+          CELL* cell(dof_handler->Get_cell(edge->Get_cell_index(0)));
+          const unsigned int dof_per_cell(cell->Get_last_dof()-
+              cell->Get_first_dof());
+          const double D(cell->Get_diffusion_coefficient());
+          for (unsigned int idir=0; idir<n_dir; ++idir)
+          {
+            const unsigned int offset_1(dof_handler->Get_n_dof()*n_mom+
+                dof_handler->Get_saf_map_reflective_dof(cell->Get_id())+
+                idir*dof_handler->Get_n_sf_per_dir());
+            const unsigned int offset_2(cell->Get_first_dof());
+            const double M2D0((*M2D)(idir,0));
+            if (n_mom==1)
+            {     
+              for (unsigned int j=0; j<dof_per_cell; ++j)
+                flux_moments[0][offset_1+j] += M2D0*x[0][offset_2+j];
+            }
+            else
+            {
+              const unsigned int edge_lid(edge->Get_lid(0));
+              Teuchos::SerialDenseVector<int,double> omega(quad->Get_omega_2d(idir));
+              const double omega_0(omega(0));
+              const double omega_1(omega(1));
+              const double M2D1((*M2D)(idir,1));
+              const double M2D2((*M2D)(idir,2));
+              FINITE_ELEMENT const* const fe(cell->Get_fe());
+              Teuchos::BLAS<int,double> blas;
+              Teuchos::SerialDenseMatrix<int,double> const* const x_grad(
+                  fe->Get_x_grad_matrix(edge_lid));
+              Teuchos::SerialDenseMatrix<int,double> const* const y_grad(
+                  fe->Get_y_grad_matrix(edge_lid));
+              Teuchos::SerialDenseVector<int,double> x_grad_correc(dof_per_cell);
+              Teuchos::SerialDenseVector<int,double> y_grad_correc(dof_per_cell);
+              Teuchos::SerialDenseVector<int,double> flux_correc(dof_per_cell);
+              for (unsigned int j=0; j<dof_per_cell; ++j)
+                flux_correc.values()[j] = x[0][offset_2+j];
+              blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,1.,
+                  x_grad->values(),x_grad->stride(),flux_correc.values(),1,0.,
+                  x_grad_correc.values(),1);
+              blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,1.,
+                  y_grad->values(),y_grad->stride(),flux_correc.values(),1,0.,
+                  y_grad_correc.values(),1);
+              for (unsigned int j=0; j<dof_per_cell; ++j)
+                flux_moments[0][offset_1+j] += M2D0*x[0][offset_2+j]-
+                  M2D1*D*omega_0*x_grad_correc(j)-M2D2*D*omega_1*y_grad_correc(j);
+            }
+          }
+        }
+      }
+    }
+  }
 }
   
 void MIP::Convert_lhs_to_fortran(int* &ia,int* &ja,double* &a,unsigned int n_dof,

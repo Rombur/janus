@@ -8,12 +8,6 @@ AC_CONFIG_SRCDIR([src/janus.cc])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile])
 
-# Checks for programs.
-AC_PROG_CXX
-
-# Checks for libraries.
-
-# Checks for header files.
 AC_ARG_WITH([gsl-include],
             [AS_HELP_STRING([--with-gsl-include],[location of the gsl headers])],
             [GSL_CXXFLAGS="-I$withval"],
@@ -43,10 +37,6 @@ AC_ARG_WITH([mpi-include],
            [MPI_CXXFLAGS="-I$withval"],
            [MPI_CXXFLAGS='-I/usr/include/mpi'])
 AC_SUBST([MPI_CXXFLAGS])
-
-# Checks for typedefs, structures, and compiler characteristics.
-
-# Checks for library functions.
 AC_ARG_WITH([gsl-lib],
             [AS_HELP_STRING([--with-gsl-lib],[location of the gsl library])],
             [GSL_LIBS="-L$withval -lgsl"],
@@ -92,6 +82,19 @@ AS_IF([test "x$with_agmg" != xno],
             [AGMG_LIBS=" "])])
 
 AC_SUBST([AGMG_LIBS])
+ 
+# Checks for programs.
+AC_PROG_CXX
+AC_PROG_CC
+
+# Checks for libraries.
+
+# Checks for header files. 
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_INLINE
+
+# Checks for library functions.
 
 AC_OUTPUT()
 

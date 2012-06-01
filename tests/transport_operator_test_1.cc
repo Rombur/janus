@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include "mpi.h"
-#include "gsl_math.h"
 #include "AztecOO.h"
 #include "Epetra_LinearProblem.h"
 #include "Epetra_Map.h"
@@ -27,9 +26,8 @@ int main(int argc,char** argv)
   unsigned int n_sources(1);
   unsigned int n_materials(1);
   unsigned int flux_moments_size(0);
-  const double sqrt_4pi(2.*sqrt(M_PI));
-  string geometry_inp("/home/bruno/Documents/Transport/janus/tests/geometry_transport_1.inp");
-  string parameters_inp("/home/bruno/Documents/Transport/janus/tests/parameters_transport_1.inp");
+  string geometry_inp("geometry_transport_1.inp");
+  string parameters_inp("parameters_transport_1.inp");
 
   MPI_Init(&argc,&argv);
   Epetra_MpiComm comm(MPI_COMM_WORLD);
@@ -86,7 +84,7 @@ int main(int argc,char** argv)
 
   // Build the quadrature
   quad[0] = new LS(parameters.Get_sn_order(),parameters.Get_L_max(),false);
-  quad[0]->Build_quadrature();
+  quad[0]->Build_quadrature(1.0);
 
   // Build the dof handler
   DOF_HANDLER dof_handler(&triangulation,parameters);
@@ -123,7 +121,7 @@ int main(int argc,char** argv)
   precond->Solve(flux_moments);
 
   for (unsigned int i=0; i<dof_handler.Get_n_dof(); ++i)
-    assert(fabs(sqrt_4pi*flux_moments[0][i]-solution[i])<0.0001);
+    assert(fabs(flux_moments[0][i]-solution[i])<0.0001);
   
   delete quad[0];
   quad[0] = NULL;

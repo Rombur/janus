@@ -1,8 +1,7 @@
 #include "EDGE.hh"
 
-EDGE::EDGE(EDGE_TYPE edge_type,unsigned int edge_gid,d_vector v0,d_vector v1) :
-  type(edge_type),
-  reflective_boundary(false),
+EDGE::EDGE(EDGE_TYPE e_type,unsigned int edge_gid,d_vector v0,d_vector v1) :
+  edge_type(e_type),
   gid(edge_gid),
   vertex_0(v0),
   vertex_1(v1)
@@ -16,7 +15,7 @@ EDGE::EDGE(EDGE_TYPE edge_type,unsigned int edge_gid,d_vector v0,d_vector v1) :
 bool EDGE::Is_interior() const
 {
   bool inside(false);
-  if (type==interior)
+  if (edge_type==interior)
     inside = true;
 
   return inside;

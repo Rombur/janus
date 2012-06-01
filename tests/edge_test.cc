@@ -40,7 +40,6 @@ int main(int argc,char** argv)
   normal_2(0) = -5.4;
   normal_2(1) = -3.6;
 
-  edge_0.Set_reflective_boundary();
   edge_0.Set_lid(0,2);
   edge_1.Set_lid(0,2);
   edge_1.Set_lid(1,1);
@@ -57,10 +56,6 @@ int main(int argc,char** argv)
   // Check interior edge
   assert(edge_0.Is_interior()==false);
   assert(edge_1.Is_interior()==true);
-
-  // Check reflective boundary
-  assert(edge_0.Is_reflective()==true);
-  assert(edge_1.Is_reflective()==false);
 
   // Check the coordinates comparison
   assert(edge_0.Has_same_coord(vertex_2,vertex_1)==false);

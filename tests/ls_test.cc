@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include "gsl_math.h"
 #include "Teuchos_BLAS.hpp"
 #include "Teuchos_BLAS_types.hpp"
 #include "Teuchos_SerialDenseMatrix.hpp"
@@ -10,13 +11,14 @@ using namespace std;
 int main(int argc,char** argv)
 {
   unsigned int n_dir(12);
+  const double four_pi(4.*M_PI);
   d_vector omega(3,0.);
   omega[0] = 0.868890300722201205229788;
   omega[1] = 0.350021174581540677777041;
   omega[2] = 0.350021174581540677777041;
   
   LS quad(4,4,true);
-  quad.Build_quadrature();
+  quad.Build_quadrature(four_pi);
 
   // Check the number of direction
   assert(n_dir==quad.Get_n_dir());

@@ -5,18 +5,37 @@
 # Date: 2012-03-16 17:53:00.340629
 #----------------------------------------------------------------------------#
 
+import MESH_GENERATOR
 import TRIANGLE
 
 input_filename = 'test.1'
 output_filename = 'output'
-mesh = 'quadrilateral'
+mesh_type = 'hexagon'
+alpha = 0.3 # Used only for random mesh and z-mesh
+x = [0.,1.] # Used only for random mesh
+y = [0.,1.] # Used only for random mesh
+side = 0.5 # Used only for hexagon mesh
+n_layer = 3 # Used only for hexagon mesh
+mat_id = [1,2,3,4] # Used only for hexagon mesh
+src_id = [4,3,2,1] # Used only for hexagon mesh
 
-triangle = TRIANGLE.TRIANGLE(input_filename,output_filename)
-triangle.Read_triangle_output_files()
-if mesh=='polygon' :
-  triangle.Generate_polygonal_mesh()
-elif mesh=='triangle' :
-  triangle.Output_remaining_cells()
-  triangle.Create_apollo_file()
-elif mesh=='quadrilateral' :
-  triangle.Generate_quadrilateral_mesh()
+triangle_mesh = ['polygon','triangle','quadrilateral']
+if mesh_type in triangle_mesh :
+  mesh = TRIANGLE.TRIANGLE(input_filename,output_filename)
+  mesh.Read_triangle_output_files()
+  if mesh_type=='polygon' :
+    mesh.Generate_polygonal_mesh()
+  elif mesh_type=='triangle' :
+    mesh.Output_remaining_cells()
+    mesh.Prepend_n_cells()
+    mesh.Create_apollo_file()
+  elif mesh_type=='quadrilateral' :
+    mesh.Generate_quadrilateral_mesh()
+else :
+  mesh = MESH_GENERATOR.MESH_GENERATOR(output_filename)
+  if mesh_type=='random' :
+    mesh.Generate_random_mesh(x,y,alpha)
+  elif mesh_type=='z-mesh' :
+    mesh.Generate_z_mesh(alpha)
+  elif mesh_type=='hexagon' :
+    mesh.Generate_hexagon_mesh(side,n_layer,mat_id,src_id)

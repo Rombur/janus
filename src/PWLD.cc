@@ -25,6 +25,8 @@ PWLD::PWLD(d_vector const &cell_x,d_vector const &cell_y) :
   x_grad_matrix = zeros;
   y_grad_matrix = zeros;
   stiffness_matrix = zeros;
+  x_grad_edge_matrix.resize(dof_per_cell,zeros);
+  y_grad_edge_matrix.resize(dof_per_cell,zeros);
 }
 
 void PWLD::Build_fe_1d()
@@ -169,6 +171,13 @@ void PWLD::Build_upwind_matrices(CELL* cell,vector<CELL*> const &mesh)
           deln_matrix[i][j][1][0];
         coupling_edge_deln_matrix[i][j]((edge_lid+1)%dof_per_cell,
           (upwind_edge_lid+1)%upwind_dof_per_cell) += deln_matrix[i][j][1][1];
+        for (unsigned int k=0; k<dof_per_cell; ++k)
+        {
+          coupling_edge_deln_matrix[i][j](k,upwind_edge_lid) += 1./dof_per_cell*
+            deln_matrix[i][j][2][0];
+          coupling_edge_deln_matrix[i][j](k,(upwind_edge_lid+1)%upwind_dof_per_cell)  
+            += 1./dof_per_cell*deln_matrix[i][j][2][1];
+        }
       }
     }
   }
@@ -268,6 +277,16 @@ void PWLD::Build_fe_2d()
     stiffness_matrix(j,i) += stiffness[1][0];
     stiffness_matrix(j,j) += stiffness[1][1];
 
+    x_grad_edge_matrix[i](i,i) += y1_y0/jacobian-y2_y0/jacobian;
+    x_grad_edge_matrix[i](i,j) += y2_y0/jacobian;
+    x_grad_edge_matrix[i](j,i) += y1_y0/jacobian-y2_y0/jacobian;
+    x_grad_edge_matrix[i](j,j) += y2_y0/jacobian;
+
+    y_grad_edge_matrix[i](i,i) -= x1_x0/jacobian+x2_x0/jacobian;
+    y_grad_edge_matrix[i](i,j) -= x2_x0/jacobian;
+    y_grad_edge_matrix[i](j,i) -= x1_x0/jacobian+x2_x0/jacobian;
+    y_grad_edge_matrix[i](j,j) -= x2_x0/jacobian;
+
     for (unsigned int k=0; k<dof_per_cell; ++k)
     {
       mass_matrix(i,k) += ratio*mass[0][2];
@@ -289,6 +308,12 @@ void PWLD::Build_fe_2d()
       stiffness_matrix(j,k) += ratio*stiffness[1][2];
       stiffness_matrix(k,i) += ratio*stiffness[2][0];
       stiffness_matrix(k,j) += ratio*stiffness[2][1];
+
+      x_grad_edge_matrix[i](i,k) -= ratio*y1_y0/jacobian;
+      x_grad_edge_matrix[i](j,k) -= ratio*y1_y0/jacobian;
+
+      y_grad_edge_matrix[i](i,k) += ratio*x1_x0/jacobian;
+      y_grad_edge_matrix[i](j,k) += ratio*x1_x0/jacobian;
 
       for (unsigned int l=0; l<dof_per_cell; ++l)
       {

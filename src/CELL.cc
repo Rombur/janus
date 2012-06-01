@@ -15,9 +15,9 @@ CELL::CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
 {
   unsigned int n_level(sigma_t.size());
   if (sigma_s[n_level-1].size()>1)
-    D = (sigma_t[n_level-1]-sigma_s[n_level-1][1])/3.;
+    D = 1./(3.*(sigma_t[n_level-1]-sigma_s[n_level-1][1]));
   else
-    D = sigma_t[n_level-1]/3.;
+    D = 1./(3.*sigma_t[n_level-1]);
 
   // Compute the area and the perimeter of the cell.
   Compute_area_and_perimeter();

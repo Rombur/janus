@@ -9,13 +9,22 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   n_dof(dof->Get_n_dof()),
   comm(comm),
   flux_moments_map(flux_moments_map),
+  saf_map(NULL),
+  saf(NULL),
   scattering_src(NULL),
   dof_handler(dof),
   precond(NULL),
   param(param),
   quad(quad)
 {
-  // Adapt the size of teucho_vector
+  if (dof_handler->Get_n_sf_per_dir()>0)
+  {
+    saf_map = new Epetra_Map(dof_handler->Get_n_sf_per_dir()*quad->Get_n_dir(),
+        0,*comm);
+    saf = new Epetra_MultiVector(*saf_map,1);
+  }
+
+  // Adapt the size of teuchos_vector
   teuchos_vector.resize(dof_handler->Get_max_dof_per_cell());
   for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
     teuchos_vector[i] = new Teuchos::SerialDenseVector<int,double> (i);
@@ -42,6 +51,8 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   n_dof(dof->Get_n_dof()),
   comm(comm),
   flux_moments_map(flux_moments_map),
+  saf_map(NULL),
+  saf(NULL),
   scattering_src(NULL),
   dof_handler(dof),
   precond(preconditioner),
@@ -49,7 +60,7 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   quad((*quad_vector)[lvl]),
   quad_vector(quad_vector)
 {
-  // Adapt the size of teucho_vector
+  // Adapt the size of teuchos_vector
   teuchos_vector.resize(dof_handler->Get_max_dof_per_cell());
   for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
     teuchos_vector[i] = new Teuchos::SerialDenseVector<int,double> (i);
@@ -79,6 +90,18 @@ TRANSPORT_OPERATOR::~TRANSPORT_OPERATOR()
   {
     delete teuchos_vector[i];
     teuchos_vector[i] = NULL;
+  }
+
+  if (saf!=NULL)
+  {
+    delete saf;
+    saf = NULL;
+  }
+
+  if (saf_map!=NULL)
+  {
+    delete saf_map;
+    saf_map = NULL;
   }
 }
 
@@ -264,8 +287,9 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
       }
       if (rhs==true)
       {
-        // Divide the source by 4 PI so the input source is easier to set
-        const double src(cell->Get_source()/(4.*M_PI));
+        // Divide the source by the sum of the weights so the input source is 
+        // easier to set
+        const double src(cell->Get_source()/param->Get_weight_sum());
         for (unsigned int k=0; k<dof_per_cell; ++k)
         {
           double const* mass_matrix_k((*mass_matrix)[k]);
@@ -286,8 +310,9 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
         Teuchos::SerialDenseVector<int,double> const* const external_normal(
             (*cell_edge)->Get_external_normal(index_cell));
         const double n_dot_omega(omega.dot(*external_normal));
-        if ((*cell_edge)->Is_reflective()==true)
-          reflective_b = true;
+        if ((*cell_edge)->Is_interior()==false)
+          if ((*cell_edge)->Get_bc_type()==reflective)
+            reflective_b = true;
         if (n_dot_omega<0.)
         {
           // Upwind
@@ -317,29 +342,45 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
           {
             Teuchos::SerialDenseMatrix<int,double> const* const downwind(
                 fe->Get_downwind_matrix(edge_lid));
-            if ((rhs==true) && ((*cell_edge)->Is_reflective()==false))
+            if ((rhs==true) && ((*cell_edge)->Get_bc_type()!=reflective))
             {
               double inc_flux_norm(0.);
-              if (((*cell_edge)->Get_edge_type()==bottom_boundary) &&
-                  (dof_handler->Is_most_normal_bottom(lvl,idir)))
-                inc_flux_norm = param->Get_inc_bottom();
-              if (((*cell_edge)->Get_edge_type()==right_boundary) &&
-                  (dof_handler->Is_most_normal_right(lvl,idir)))
-                inc_flux_norm = param->Get_inc_right();
-              if (((*cell_edge)->Get_edge_type()==top_boundary) &&
-                  (dof_handler->Is_most_normal_top(lvl,idir)))
-                inc_flux_norm = param->Get_inc_top();
-              if (((*cell_edge)->Get_edge_type()==left_boundary) &&
-                  (dof_handler->Is_most_normal_left(lvl,idir)))
-                inc_flux_norm = param->Get_inc_left();
-              inc_flux_norm /= 4.*M_PI;
+              if ((*cell_edge)->Get_edge_type()==bottom_boundary)
+              {
+                if ((((*cell_edge)->Get_bc_type()==most_normal) &&
+                      (dof_handler->Is_most_normal_bottom(lvl,idir))) ||
+                    ((*cell_edge)->Get_bc_type()==isotropic))
+                  inc_flux_norm = param->Get_inc_bottom();
+              }
+              if ((*cell_edge)->Get_edge_type()==right_boundary) 
+              {
+                if ((((*cell_edge)->Get_bc_type()==most_normal) &&
+                      (dof_handler->Is_most_normal_right(lvl,idir))) ||
+                    ((*cell_edge)->Get_bc_type()==isotropic))
+                  inc_flux_norm = param->Get_inc_right();
+              }
+              if ((*cell_edge)->Get_edge_type()==top_boundary) 
+              {
+                if ((((*cell_edge)->Get_bc_type()==most_normal) &&
+                      (dof_handler->Is_most_normal_top(lvl,idir))) ||
+                    ((*cell_edge)->Get_bc_type()==isotropic))
+                  inc_flux_norm = param->Get_inc_top();
+              }
+              if ((*cell_edge)->Get_edge_type()==left_boundary) 
+              {
+                if ((((*cell_edge)->Get_bc_type()==most_normal) &&
+                      (dof_handler->Is_most_normal_left(lvl,idir))) ||
+                    ((*cell_edge)->Get_bc_type()==isotropic))
+                  inc_flux_norm = param->Get_inc_left();
+              }
+              inc_flux_norm /= param->Get_weight_sum();
               Teuchos::SerialDenseVector<int,double> inc_flux(dof_per_cell);
               inc_flux.putScalar(inc_flux_norm);
               blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,-n_dot_omega,
                   downwind->values(),downwind->stride(),inc_flux.values(),1,1.,
                   b.values(),1);
             }
-            if ((*cell_edge)->Is_reflective()==true)
+            if ((*cell_edge)->Get_bc_type()==reflective)
             {
               Teuchos::SerialDenseVector<int,double> inc_flux(
                   Get_saf(idir,n_dir,n_mom,dof_per_cell,flux_moments,cell,
@@ -387,6 +428,9 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
         flux_moments[0][j+offset] += d2m*psi[0][j];
     }
   }
+  // Update the significant angular fluxes
+  if (dof_handler->Get_n_sf_per_dir()>0)
+    Update_saf(flux_moments,n_dir);
 }
 
 Teuchos::SerialDenseVector<int,double> TRANSPORT_OPERATOR::Get_saf(
@@ -454,13 +498,21 @@ void TRANSPORT_OPERATOR::Store_saf(Epetra_MultiVector const &psi,
     Epetra_MultiVector &flux_moments,CELL const* const cell,unsigned int idir,
     unsigned int n_mom,unsigned int dof_per_cell) const
 {
-  unsigned int offset_1(dof_handler->Get_n_dof()*n_mom+
-      dof_handler->Get_saf_map_reflective_dof(cell->Get_id())+
+  unsigned int offset_1(dof_handler->Get_saf_map_reflective_dof(cell->Get_id())+
       idir*dof_handler->Get_n_sf_per_dir());
   unsigned int offset_2(dof_handler->Get_saf_map_dof(cell->Get_id()));
 
   for (unsigned int i=0; i<dof_per_cell; ++i)
-    flux_moments[0][offset_1+i] = psi[0][offset_2+i];
+    (*saf)[0][offset_1+i] = psi[0][offset_2+i];
+}
+
+void TRANSPORT_OPERATOR::Update_saf(Epetra_MultiVector &flux_moments,
+    unsigned int n_dir) const
+{
+  const unsigned int offset(dof_handler->Get_n_dof()*quad->Get_n_mom());
+  const unsigned int i_max(n_dir*dof_handler->Get_n_sf_per_dir());
+  for (unsigned int i=0; i<i_max; ++i)
+    flux_moments[0][offset+i] = (*saf)[0][i];
 }
 
 char const* TRANSPORT_OPERATOR::Label() const

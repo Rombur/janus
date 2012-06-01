@@ -56,6 +56,14 @@ class FINITE_ELEMENT
     /// Return a pointer to #y_grad_matrix.
     Teuchos::SerialDenseMatrix<int,double> const* const Get_y_grad_matrix() const;
 
+    /// Return a pointer to #x_grad_edge_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_x_grad_matrix(
+        unsigned int i) const;
+
+    /// Return a pointer to #y_grad_edge_matrix.
+    Teuchos::SerialDenseMatrix<int,double> const* const Get_y_grad_matrix(
+        unsigned int i) const;
+
     /// Return a pointer to #stiffness_matrix.
     Teuchos::SerialDenseMatrix<int,double> const* const Get_stiffness_matrix() const;
 
@@ -78,14 +86,18 @@ class FINITE_ELEMENT
     /// Compute \f$\int_{E_c} \partial_n b_i\ b_j\ dr \f$ \f$ where b_i$ and $ b_j\f$
     /// are defined on different cells.
     vector<vector<Teuchos::SerialDenseMatrix<int,double> > > coupling_edge_deln_matrix;
-    /// Compute the mass matrix \f$\int_D b_i\ b_j\ dr\f$.
+    /// Mass matrix \f$\int_D b_i\ b_j\ dr\f$.
     Teuchos::SerialDenseMatrix<int,double> mass_matrix;
-    /// Compute the x component of the gradient matrix \f$\int_D b_i\ \partial_x b_j\ dr\f$.
+    /// x component of the gradient matrix \f$\int_D b_i\ \partial_x b_j\ dr\f$.
     Teuchos::SerialDenseMatrix<int,double> x_grad_matrix;
-    /// Compute the x component of the gradient matrix \f$\int_D b_i\ \partial_y b_j\ dr\f$.
+    /// y component of the gradient matrix \f$\int_D b_i\ \partial_y b_j\ dr\f$.
     Teuchos::SerialDenseMatrix<int,double> y_grad_matrix;
-    /// Compute the stiffness matrix \f$\int_D \boldsymbol{\nabla} b_i\ \boldsymbol{\nabla} b_j\ dr\f$.
+    /// Stiffness matrix \f$\int_D \boldsymbol{\nabla} b_i\ \boldsymbol{\nabla} b_j\ dr\f$.
     Teuchos::SerialDenseMatrix<int,double> stiffness_matrix;
+    /// Vector of the x component of the gradient matrices associated to edges.
+    vector<Teuchos::SerialDenseMatrix<int,double> > x_grad_edge_matrix;
+    /// Vector of the y component of the gradient matrices associated to edges.
+    vector<Teuchos::SerialDenseMatrix<int,double> > y_grad_edge_matrix;
 };
 
 inline unsigned int FINITE_ELEMENT::Get_dof_per_cell() const
@@ -130,6 +142,16 @@ inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_x
 inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_y_grad_matrix() const
 {
   return &y_grad_matrix;
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_x_grad_matrix(unsigned int i) const
+{
+  return &x_grad_edge_matrix[i];
+}
+
+inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_y_grad_matrix(unsigned int i) const
+{
+  return &y_grad_edge_matrix[i];
 }
 
 inline Teuchos::SerialDenseMatrix<int,double> const* const FINITE_ELEMENT::Get_stiffness_matrix() const

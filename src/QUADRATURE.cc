@@ -25,7 +25,7 @@ Teuchos::SerialDenseVector<int,double> QUADRATURE::Get_omega_2d(unsigned int idi
   return omega_2d;
 }
 
-void QUADRATURE::Build_quadrature()
+void QUADRATURE::Build_quadrature(const double weight_sum)
 {
   // Compute sin_theta octant
   Build_octant();
@@ -34,7 +34,7 @@ void QUADRATURE::Build_quadrature()
   Deploy_octant();
 
   // Compute the spherical harmonics
-  Compute_harmonics();
+  Compute_harmonics(weight_sum);
 
   // Compute D
   if (galerkin==true)
@@ -58,7 +58,7 @@ void QUADRATURE::Build_quadrature()
     Teuchos::BLAS<int,double> blas;
     Teuchos::SerialDenseMatrix<int,double> weight_matrix(n_dir,n_dir);
     for (unsigned int i=0; i<n_dir; ++i)
-      weight_matrix(i,i) = 4.*M_PI*weight(i);
+      weight_matrix(i,i) = weight_sum*weight(i);
     D2M.shape(n_mom,n_dir);
 
     blas.GEMM(Teuchos::TRANS,Teuchos::NO_TRANS,n_mom,n_dir,n_dir,1.,
@@ -105,7 +105,7 @@ void QUADRATURE::Deploy_octant()
   }
 }
 
-void QUADRATURE::Compute_harmonics()
+void QUADRATURE::Compute_harmonics(const double weight_sum)
 {
   const unsigned int L_max_x(L_max+1);
   d_vector phi(n_dir,0.);
@@ -124,18 +124,20 @@ void QUADRATURE::Compute_harmonics()
   {
     for (unsigned int m=0; m<l+1; ++m)
     {
-      double phase(pow(-1.,m));
       for (unsigned int idir=0; idir<n_dir; ++idir)
       {
-        // Compute the normalized associated Legendre polynomail using GSL:
-        // sqrt((2l+1)/4pi (l-m)!/(l+m)!) P_l^m(cos(theta))
-        // note that the factor (-1)^m is included in the P_l^m evaluation
+        // Compute the normalized associated Legendre polynomial using GSL:
+        // sqrt((2l+1)/4pi (l-m)!/(l+m)!) P_l^m(cos(theta)). The
+        // Condon-Shortley phase is included in the associated Legendre
+        // polynomial.
         const double P_lm(gsl_sf_legendre_sphPlm(l,m,omega[idir](2)));
+        // If the sum of the weight is not 4pi the P_lm must be modified
+        const double weighted_P_lm(sqrt((4.*M_PI)/weight_sum)*P_lm);
         if (m==0)
-          Ye[l][m][idir] = P_lm;
+          Ye[l][m][idir] = weighted_P_lm;
         else
-          Ye[l][m][idir] = M_SQRT2*phase*P_lm*cos(m*phi[idir]);
-        Yo[l][m][idir] = M_SQRT2*phase*P_lm*sin(m*phi[idir]);
+          Ye[l][m][idir] = M_SQRT2*weighted_P_lm*cos(m*phi[idir]);
+        Yo[l][m][idir] = M_SQRT2*weighted_P_lm*sin(m*phi[idir]);
       } 
     }
   }
@@ -177,7 +179,6 @@ void QUADRATURE::Compute_harmonics()
       unsigned int pos(0);
       for (unsigned int l=0; l<L_max_x; ++l)
       {
-        // double ragusa_norm(sqrt(4.*M_PI)*sqrt(2.*l+1));
         for (int m=l; m>=0; --m)
         {
           // Do not use the EVEN spherical harmonics when m+l is odd

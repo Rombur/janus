@@ -9,13 +9,16 @@ BLD::BLD(d_vector const &cell_x,d_vector const &cell_y) :
   Teuchos::SerialDenseMatrix<int,double> zeros_4(4,4);
   downwind.resize(4,zeros_4);
   upwind.resize(4,zeros_4);
-  edge_deln_matrix.resize(4,vector<Teuchos::SerialDenseMatrix<int,double> > (2,zeros_4));
+  edge_deln_matrix.resize(4,vector<Teuchos::SerialDenseMatrix<int,double> > (2,
+        zeros_4));
   coupling_edge_deln_matrix.resize(4,
       vector<Teuchos::SerialDenseMatrix<int,double> > (2,zeros_4));
   mass_matrix = zeros_4;
   x_grad_matrix = zeros_4;
   y_grad_matrix = zeros_4;
   stiffness_matrix = zeros_4;
+  x_grad_edge_matrix.resize(4,zeros_4);
+  y_grad_edge_matrix.resize(4,zeros_4);
 }
 
 void BLD::Build_fe_1d()
@@ -95,6 +98,44 @@ void BLD::Build_fe_1d()
   edge_deln_matrix[3][0](2,3) = 2.*v_ratio;
   edge_deln_matrix[3][0](3,0) = -v_ratio;
   edge_deln_matrix[3][0](3,3) = -2.*v_ratio;
+
+  // Build the grad_edge_matrices
+  // Matrix associated to the bottom edge
+  x_grad_edge_matrix[0](0,0) = -1./delta_x;
+  x_grad_edge_matrix[0](0,1) = 1./delta_x;
+  x_grad_edge_matrix[0](1,0) = -1./delta_x;
+  x_grad_edge_matrix[0](1,1) = 1./delta_x;
+  y_grad_edge_matrix[0](0,0) = -1./delta_y;
+  y_grad_edge_matrix[0](0,3) = 1./delta_y;
+  y_grad_edge_matrix[0](1,1) = -1./delta_y;
+  y_grad_edge_matrix[0](1,2) = -1./delta_y;
+  // Matrix associated to the right edge
+  x_grad_edge_matrix[1](1,0) = -1./delta_x;
+  x_grad_edge_matrix[1](1,1) = 1./delta_x;
+  x_grad_edge_matrix[1](2,2) = 1./delta_x;
+  x_grad_edge_matrix[1](2,3) = -1./delta_x;
+  y_grad_edge_matrix[1](1,1) = -1./delta_y;
+  y_grad_edge_matrix[1](1,2) = 1./delta_y;
+  y_grad_edge_matrix[1](2,1) = -1./delta_y;
+  y_grad_edge_matrix[1](2,2) = 1./delta_y;
+  // Matrix associated to the top edge
+  x_grad_edge_matrix[2](2,2) = 1./delta_x;
+  x_grad_edge_matrix[2](2,3) = -1./delta_x;
+  x_grad_edge_matrix[2](3,2) = 1./delta_x;
+  x_grad_edge_matrix[2](3,3) = -1./delta_x;
+  y_grad_edge_matrix[2](2,1) = -1./delta_y;
+  y_grad_edge_matrix[2](2,2) = 1./delta_y;
+  y_grad_edge_matrix[2](3,0) = -1./delta_y;
+  y_grad_edge_matrix[2](3,3) = 1./delta_y;
+  // Matrix associated to the right edge
+  x_grad_edge_matrix[3](0,0) = -1./delta_x;
+  x_grad_edge_matrix[3](0,1) = 1./delta_x;
+  x_grad_edge_matrix[3](3,2) = 1./delta_x;
+  x_grad_edge_matrix[3](3,3) = -1./delta_x;
+  y_grad_edge_matrix[3](0,0) = -1./delta_y;
+  y_grad_edge_matrix[3](0,3) = 1./delta_y;
+  y_grad_edge_matrix[3](3,0) = -1./delta_y;
+  y_grad_edge_matrix[3](3,3) = 1./delta_y;
 }
 
 void BLD::Build_upwind_matrices(CELL* cell,vector<CELL*> const &mesh)

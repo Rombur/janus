@@ -35,16 +35,28 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
         edge->Set_lid(0,j);
       else
         edge->Set_lid(1,j);
-      // Check if the edge is on the reflective boundary
-      if (((edge->Get_edge_type()==bottom_boundary) && (param.Get_inc_bottom()<0.)) ||
-          ((edge->Get_edge_type()==right_boundary) && (param.Get_inc_right()<0.)) ||
-          ((edge->Get_edge_type()==top_boundary) && (param.Get_inc_top()<0.)) ||
-          ((edge->Get_edge_type()==left_boundary) && (param.Get_inc_left()<0.)))
+
+      // Set the type of boundary condition on the edge
+      if (edge->Get_edge_type()==bottom_boundary)
+        edge->Set_bc_type(param.Get_bottom_bc_type());
+      if (edge->Get_edge_type()==right_boundary)
+        edge->Set_bc_type(param.Get_right_bc_type());
+      if (edge->Get_edge_type()==top_boundary)
+        edge->Set_bc_type(param.Get_top_bc_type());
+      if (edge->Get_edge_type()==left_boundary)
+        edge->Set_bc_type(param.Get_left_bc_type());
+
+      // If the edge is on the reflective boundary, store the number of dof
+      // associated to the cell
+      if (edge->Is_interior()==false)
       {
-        edge->Set_reflective_boundary();
-        n_sf_per_dir += fe->Get_dof_per_cell();
-        cell_saf = true;
+        if (edge->Get_bc_type()==reflective)
+        {
+          n_sf_per_dir += fe->Get_dof_per_cell();
+          cell_saf = true;
+        }
       }
+
       cell_edges[j] = edge;
     }
     if (cell_saf==true)

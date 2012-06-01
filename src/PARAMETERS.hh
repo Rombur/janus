@@ -2,11 +2,12 @@
 #define _PARAMETERS_HH_
 
 #include <fstream>
+#include <cassert>
 #include <cmath>
+#include <iostream>
 #include <string>
 #include <vector>
-
-#include <iostream>
+#include "gsl_math.h"
 
 using namespace std;
 
@@ -14,6 +15,9 @@ typedef vector<double> d_vector;
 
 /// Enum on the aggregation type used by ML: uncoupled, mis or uncoupled-mis
 enum AGGREGATION_TYPE{uncoupled,mis,uncoupled_mis};
+
+/// Enum on the different types of boundary conditions.
+enum BC_TYPE{vacuum,isotropic,most_normal,reflective};
 
 /// Enum on the FE type: bld (BiLinear Discontinuous) and pwld (PieceWise
 /// Linear Discontinuous).
@@ -93,9 +97,28 @@ class PARAMETERS
     /// Return the intensity of the source i.
     double Get_src(unsigned int i) const;
 
+    /// Return the sum of the weights (1, 2pi or 4pi)
+    double Get_weight_sum() const;
+
     /// Return the type iof aggregation used by ML (uncoupled, mis or
     /// uncoupled-mis).
     AGGREGATION_TYPE Get_aggregation_type() const;
+
+    /// Return the boundary condition of the bottom side of the domain
+    /// (vacuum, isotropic, most_normal or reflective).
+    BC_TYPE Get_bottom_bc_type() const;
+
+    /// Return the boundary condition of the right side of the domain
+    /// (vacuum, isotropic, most_normal or reflective).
+    BC_TYPE Get_right_bc_type() const;
+
+    /// Return the boundary condition of the top side of the domain
+    /// (vacuum, isotropic, most_normal or reflective).
+    BC_TYPE Get_top_bc_type() const;
+
+    /// Return the boundary condition of the left side of the domain
+    /// (vacuum, isotropic, most_normal or reflective).
+    BC_TYPE Get_left_bc_type() const;
 
     /// Return the type of finite elements used (BLD or PWLD).
     FE_TYPE Get_fe_type() const;
@@ -164,8 +187,18 @@ class PARAMETERS
     double inc_top;
     /// Left incoming flux.
     double inc_left;
+    /// Sum of the weights (1, 2pi or 4pi)
+    double weight_sum;
     /// Type of aggregation used by ML: uncoupled, mis or uncoupld-mis.
     AGGREGATION_TYPE aggregation_type;
+    /// Type of boundary condition on the bottom side.
+    BC_TYPE bottom_bc_type;
+    /// Type of boundary condition on the right side.
+    BC_TYPE right_bc_type;
+    /// Type of boundary condition on the top side.
+    BC_TYPE top_bc_type;
+    /// Type of boundary condition on the left side.
+    BC_TYPE left_bc_type;
     /// Type of finite elements: BLD or PWLD.
     FE_TYPE fe_type;
     /// Type of quadrature: GLC or LS.
@@ -267,9 +300,35 @@ inline double PARAMETERS::Get_src(unsigned int i) const
 {
   return src[i];
 }
+
+inline double PARAMETERS::Get_weight_sum() const
+{
+  return weight_sum;
+}
+
 inline AGGREGATION_TYPE PARAMETERS::Get_aggregation_type() const
 {
   return aggregation_type;
+}
+
+inline BC_TYPE PARAMETERS::Get_bottom_bc_type() const
+{
+  return bottom_bc_type;
+}
+
+inline BC_TYPE PARAMETERS::Get_right_bc_type() const
+{
+  return right_bc_type;
+}
+
+inline BC_TYPE PARAMETERS::Get_top_bc_type() const
+{
+  return top_bc_type;
+}
+
+inline BC_TYPE PARAMETERS::Get_left_bc_type() const
+{
+  return left_bc_type;
 }
 
 inline FE_TYPE PARAMETERS::Get_fe_type() const

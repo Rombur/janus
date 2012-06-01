@@ -114,6 +114,10 @@ class CONVERT_INPUT(object) :
     self.Search("MAX ITER")
     self.max_iter = int(self.Read_next(1))
 
+# Read the sum of the weights of the quadrature
+    self.Search("WEIGHT SUM")
+    self.weight_sum = self.data[self.begin:self.end-1].lower()
+
 # Read the verbosity level of the code
     self.Search("VERBOSE")
     self.verbose = int(self.Read_next(1))
@@ -172,21 +176,45 @@ class CONVERT_INPUT(object) :
     self.Search("SOURCE")
     self.source = self.String_to_np()
 
-# Read the intensity of the bottom incoming flux
-    self.Search("BOTTOM INCOMING FLUX")
-    self.inc_bottom = self.Read_next(1)
+# Read the type of boundary of the bottom side
+    self.Search("BOTTOM BOUNDARY CONDITION")
+    self.bottom_bc_type = self.data[self.begin:self.end-1].lower()
 
-# Read the intensity of the right incoming flux
-    self.Search("RIGHT INCOMING FLUX")
-    self.inc_right = self.Read_next(1)
+# Read the intensity of the bottom incoming flux if the boundary condition is
+# most normal or isotropic incoming flux
+    if self.bottom_bc_type=="most normal" or self.bottom_bc_type=="isotropic":
+      self.Search("BOTTOM INCOMING FLUX")
+      self.inc_bottom = self.Read_next(1)
 
-# Read the intensity of the top incoming flux
-    self.Search("TOP INCOMING FLUX")
-    self.inc_top = self.Read_next(1)
+# Read the type of boundary of the right side
+    self.Search("RIGHT BOUNDARY CONDITION")
+    self.right_bc_type = self.data[self.begin:self.end-1].lower()
 
-# Read the intensity of the left incoming flux
-    self.Search("LEFT INCOMING FLUX")
-    self.inc_left = self.Read_next(1)
+# Read the intensity of the right incoming flux if the boundary condition is
+# most normal or isotropic incoming flux
+    if self.right_bc_type=="most normal" or self.right_bc_type=="isotropic":
+      self.Search("RIGHT INCOMING FLUX")
+      self.inc_right = self.Read_next(1)
+
+# Read the type of boundary of the top side
+    self.Search("TOP BOUNDARY CONDITION")
+    self.top_bc_type = self.data[self.begin:self.end-1].lower()
+
+# Read the intensity of the top incoming flux if the boundary condition is
+# most normal or isotropic incoming flux
+    if self.top_bc_type=="most normal" or self.top_bc_type=="isotropic":
+      self.Search("TOP INCOMING FLUX")
+      self.inc_top = self.Read_next(1)
+
+# Read the type of boundary of the left side
+    self.Search("LEFT BOUNDARY CONDITION")
+    self.left_bc_type = self.data[self.begin:self.end-1].lower()
+
+# Read the intensity of the left incoming flux if the boundary condition is
+# most normal or isotropic incoming flux
+    if self.left_bc_type=="most normal" or self.left_bc_type=="isotropic":
+      self.Search("LEFT INCOMING FLUX")
+      self.inc_left = self.Read_next(1)
 
 # Read the total cross sections
     self.Search("TOTAL XS")
@@ -226,6 +254,9 @@ class CONVERT_INPUT(object) :
 
 # Write the maximum number of iterations
     output_file.write(str(self.max_iter)+" ")
+
+# Write the sum of the weight of the quadrature
+    output_file.write(self.weight_sum+" ")
 
 # Write the verbosity level of the code
     output_file.write(str(self.verbose)+"\n")
@@ -297,17 +328,65 @@ class CONVERT_INPUT(object) :
       output_file.write(str(src)+" ")
     output_file.write("\n")
 
-# Write the bottom incoming flux
-    output_file.write(str(self.inc_bottom)+"\n")
+# Write the bottom boundary condition type
+    if self.bottom_bc_type=="vacuum" :
+      output_file.write("vacuum\n")
+    elif self.bottom_bc_type=="reflective" :
+      output_file.write("reflective\n")
+    elif self.bottom_bc_type=="most normal" :
+      output_file.write("most_normal ")
+    elif self.bottom_bc_type=="isotropic" :
+      output_file.write("isotropic ")
+    else :
+      self.Abort("Unknown boundary condition type for the bottom boundary\n")
+# Write the bottom incoming flux if necessary
+    if self.bottom_bc_type=="most normal" or self.bottom_bc_type=="isotropic" :
+      output_file.write(str(self.inc_bottom)+"\n")
 
-# Write the right incoming flux
-    output_file.write(str(self.inc_right)+"\n")
+# Write the right boundary condition type
+    if self.right_bc_type=="vacuum" :
+      output_file.write("vacuum\n")
+    elif self.right_bc_type=="reflective" :
+      output_file.write("reflective\n")
+    elif self.right_bc_type=="most normal" :
+      output_file.write("most_normal ")
+    elif self.right_bc_type=="isotropic" :
+      output_file.write("isotropic ")
+    else :
+      self.Abort("Unknown boundary condition type for the right boundary\n")
+# Write the right incoming flux if necessary
+    if self.right_bc_type=="most normal" or self.right_bc_type=="isotropic" :
+      output_file.write(str(self.inc_right)+"\n")
 
-# Write the top incoming flux
-    output_file.write(str(self.inc_top)+"\n")
+# Write the top boundary condition type
+    if self.top_bc_type=="vacuum" :
+      output_file.write("vacuum\n")
+    elif self.top_bc_type=="reflective" :
+      output_file.write("reflective\n")
+    elif self.top_bc_type=="most normal" :
+      output_file.write("most_normal ")
+    elif self.top_bc_type=="isotropic" :
+      output_file.write("isotropic ")
+    else :
+      self.Abort("Unknown boundary condition type for the top boundary\n")
+# Write the top incoming flux if necessary
+    if self.top_bc_type=="most normal" or self.top_bc_type=="isotropic" :
+      output_file.write(str(self.inc_top)+"\n")
 
-# Write the left incoming flux
-    output_file.write(str(self.inc_left)+"\n")
+# Write the left boundary condition type
+    if self.left_bc_type=="vacuum" :
+      output_file.write("vacuum\n")
+    elif self.left_bc_type=="reflective" :
+      output_file.write("reflective\n")
+    elif self.left_bc_type=="most normal" :
+      output_file.write("most_normal ")
+    elif self.left_bc_type=="isotropic" :
+      output_file.write("isotropic ")
+    else :
+      self.Abort("Unknown boundary condition type for the left boundary\n")
+# Write the top incoming flux if necessary
+    if self.left_bc_type=="most normal" or self.left_bc_type=="isotropic" :
+      output_file.write(str(self.inc_left)+"\n")
 
 # Write the cross sections
     offset = 0

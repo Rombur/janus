@@ -29,8 +29,9 @@ int main(int argc,char** argv)
   unsigned int n_materials(2);
   unsigned int flux_moments_size(0);
   const double sqrt_4pi(2.*sqrt(M_PI));
-  string geometry_inp("/home/bruno/Documents/Transport/janus/tests/geometry_transport_2.inp");
-  string parameters_inp("/home/bruno/Documents/Transport/janus/tests/parameters_transport_2.inp");
+  const double four_pi(4.*M_PI);
+  string geometry_inp("geometry_transport_2.inp");
+  string parameters_inp("parameters_transport_2.inp");
 
   MPI_Init(&argc,&argv);
   Epetra_MpiComm comm(MPI_COMM_WORLD);
@@ -82,7 +83,7 @@ int main(int argc,char** argv)
       quad[lvl] = new LS(tmp_sn,tmp_L_max,parameters.Get_galerkin());
     else
       quad[lvl] = new GLC(tmp_sn,tmp_L_max,parameters.Get_galerkin());
-    quad[lvl]->Build_quadrature();
+    quad[lvl]->Build_quadrature(four_pi);
 
     tmp_sn = ceil(tmp_sn/2.);
     if (tmp_L_max>tmp_sn)

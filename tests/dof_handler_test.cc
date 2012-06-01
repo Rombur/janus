@@ -1,5 +1,6 @@
 #include <cassert>
 #include <string>
+#include "gsl_math.h"
 #include "CELL.hh"
 #include "DOF_HANDLER.hh"
 #include "EDGE.hh"
@@ -14,8 +15,9 @@ typedef vector<unsigned int> ui_vector;
 
 int main(int argc,char** argv)
 {
-  string geometry_inp("/home/bruno/Documents/Transport/janus/tests/geometry_dof.inp");
-  string parameters_inp("/home/bruno/Documents/Transport/janus/tests/parameters_dof.inp");
+  const double four_pi(4.*M_PI);
+  string geometry_inp("geometry_dof.inp");
+  string parameters_inp("parameters_dof.inp");
 
   TRIANGULATION triangulation(&geometry_inp);
   PARAMETERS parameters(&parameters_inp);
@@ -29,11 +31,11 @@ int main(int argc,char** argv)
   
   quad[0] = new GLC(parameters.Get_sn_order(),parameters.Get_L_max(),
       parameters.Get_galerkin());
-  quad[0]->Build_quadrature();
+  quad[0]->Build_quadrature(four_pi);
   
   quad[1] = new GLC(parameters.Get_sn_order()/2.,parameters.Get_L_max()/2.,
       parameters.Get_galerkin());
-  quad[1]->Build_quadrature();
+  quad[1]->Build_quadrature(four_pi);
 
   DOF_HANDLER dof_handler(&triangulation,parameters);
   dof_handler.Compute_sweep_ordering(quad);
@@ -108,7 +110,7 @@ int main(int argc,char** argv)
   // Check the number of cells
   assert(dof_handler.Get_n_cells()==5);
 
-  // Chek the significan angular flux map
+  // Chek the significant angular flux map
   assert(dof_handler.Get_saf_map_dof(0)==0);
   assert(dof_handler.Get_saf_map_dof(2)==6);
   assert(dof_handler.Get_saf_map_dof(4)==12);

@@ -20,8 +20,9 @@ int main(int argc,char** argv)
   MPI_Init(&argc,&argv);
   Epetra_MpiComm comm(MPI_COMM_WORLD);
 
-  string geometry_inp("/home/bruno/Documents/Transport/janus/tests/geometry_mip.inp");
-  string parameters_inp("/home/bruno/Documents/Transport/janus/tests/parameters_mip.inp");
+  const double four_pi(4.*M_PI);
+  string geometry_inp("geometry_mip.inp");
+  string parameters_inp("parameters_mip.inp");
 
   TRIANGULATION triangulation(&geometry_inp);
   PARAMETERS parameters(&parameters_inp);
@@ -35,7 +36,7 @@ int main(int argc,char** argv)
   
   quad[0] = new GLC(parameters.Get_sn_order(),parameters.Get_L_max(),
       parameters.Get_galerkin());
-  quad[0]->Build_quadrature();
+  quad[0]->Build_quadrature(four_pi);
 
   DOF_HANDLER dof_handler(&triangulation,parameters);
   dof_handler.Compute_sweep_ordering(quad);

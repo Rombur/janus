@@ -33,7 +33,8 @@ class TRIANGLE(object) :
     self.elem_filename = input_filename+'.ele'
 
 # Output filename
-    self.output_file = open(output_filename+'.mesh','w')
+    self.output_filename = output_filename
+    self.output_file = open(output_filename+'.inp','w')
     self.output_silo = open('silo_'+output_filename+'.txt','w')
 
     self.mesh = []
@@ -130,6 +131,9 @@ class TRIANGLE(object) :
 # Close output file
     self.output_file.close()
 
+# Prepend the number of cells now that the mesh is built
+    self.Prepend_n_cells()
+
 # Create a file readable by apollo
     self.Create_apollo_file()
 
@@ -162,7 +166,7 @@ class TRIANGLE(object) :
         if not np.equal(vertex_2,common_coord).all() :
           rejected = True
       if (gamma-np.pi/2)>1e-15 :
-        if not np.equal(vertex_1,common_coord).all() :
+        if not np.equal(vertex_3,common_coord).all() :
           rejected = True
 # Check that the vertices don't form a corner. Each vertex can only be present
 # once in the list.
@@ -314,7 +318,7 @@ class TRIANGLE(object) :
     n_cells = len(self.mesh)
     n_dof = 0
     offset = np.zeros(n_cells+1)
-    repartion = np.zeros((6,1))
+    repartition = np.zeros((8,1))
 
     index = 1
     for cell in self.mesh :
@@ -334,7 +338,7 @@ class TRIANGLE(object) :
     for cell in self.mesh :
       for vertex in cell[1] :
         self.output_silo.write(str(vertex[0])+' '+str(vertex[1])+'\n')
-      repartion[len(cell[1])-3] += 1
+      repartition[len(cell[1])-3] += 1
 
 # Write the material id
     for cell in self.mesh :
@@ -348,13 +352,15 @@ class TRIANGLE(object) :
 
     print 'Initial number of triangles: ',self.n_triangles
     print 'Number of cells: ',n_cells
-    print 'Repartion of the cells:'
-    print '-triangles: ',repartion[0]
-    print '-qualilaterals: ',repartion[1]
-    print '-pentagons: ',repartion[2]
-    print '-hexagons: ',repartion[3]
-    print '-heptagons: ',repartion[4]
-    print '-octogons: ',repartion[5]
+    print 'Repartition of the cells:'
+    print '-triangles: ',repartition[0]
+    print '-quadrilaterals: ',repartition[1]
+    print '-pentagons: ',repartition[2]
+    print '-hexagons: ',repartition[3]
+    print '-heptagons: ',repartition[4]
+    print '-octagons: ',repartition[5]
+    print '-nonagons: ',repartition[6]
+    print '-decagons: ',repartition[7]
     print 'Initial number of degrees of freedom: ',3*self.n_triangles
     print 'Number of degrees of freedom: ',n_dof
 
@@ -363,9 +369,12 @@ class TRIANGLE(object) :
   def Generate_quadrilateral_mesh(self) :
     """Generate a polygonal mesh."""
 
+    self.output_file('polygon\n')
+    self.output_file(str(4*len(self.triangles))+'\n')
+
     for triangle in self.triangles :
-      mat_id = triangle[1]%100
-      src_id = (triangle[1]-mat_id)/100
+      mat_id = int(triangle[1]%100)
+      src_id = int((triangle[1]-mat_id)/100)
       vertex_1 = self.vertices[int(triangle[0][0])][1]
       vertex_2 = self.vertices[int(triangle[0][1])][1]
       vertex_3 = self.vertices[int(triangle[0][2])][1]
@@ -421,3 +430,15 @@ class TRIANGLE(object) :
     midpoint_3 = [(vertex_1[0]+vertex_3[0])/2.,(vertex_1[1]+vertex_3[1])/2.] 
 
     return barycenter,midpoint_1,midpoint_2,midpoint_3
+
+#----------------------------------------------------------------------------#
+
+  def Prepend_n_cells(self) :
+    """Prepend the number of cells to the output file."""
+
+    self.output_file = open(self.output_filename+'.mesh','r+')
+    old = self.output_file.read()
+    self.output_file.seek(0)
+    self.output_file.write('polygon\n')
+    self.output_file.write(str(len(self.mesh))+'\n'+old)
+    self.output_file.close()

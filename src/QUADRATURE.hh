@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include <vector>
-#include "gsl_math.h"
 #include "gsl_sf_legendre.h"
 #include "Teuchos_BLAS.hpp"
 #include "Teuchos_BLAS_types.hpp"
@@ -21,7 +20,7 @@ class QUADRATURE
     QUADRATURE(unsigned int sn,unsigned int L_max,bool galerkin);
 
     /// Build the quadrature, i.e. M,D and omega (direction vector).
-    void Build_quadrature();
+    void Build_quadrature(const double weight_sum);
 
     /// Return the number of directions of the quadrature.
     unsigned int Get_n_dir() const;
@@ -50,7 +49,7 @@ class QUADRATURE
     void Deploy_octant();
 
     /// Compute the spherical harmonics and build the matrix M2D.
-    void Compute_harmonics();
+    void Compute_harmonics(const double weight_sum);
 
     /// If flag is true, the quadrature is a Galerkin quadrature.
     const bool galerkin;

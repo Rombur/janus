@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cmath>
+#include "gsl_math.h"
 #include "Teuchos_SerialDenseMatrix.hpp"
 #include "GLC.hh"
 
@@ -8,13 +9,14 @@ using namespace std;
 int main(int argc,char** argv)
 {
   unsigned int n_dir(12);
+  const double four_pi(4.*M_PI);
   d_vector omega(3,0.);
   omega[0] = 0.868846143426105;
   omega[1] = 0.35988785622265201;
   omega[2] = 0.33998104358485631;
 
   GLC quad(4,4,false);
-  quad.Build_quadrature();
+  quad.Build_quadrature(four_pi);
 
   // Check the number of direction
   assert(n_dir==quad.Get_n_dir());

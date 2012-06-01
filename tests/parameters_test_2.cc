@@ -13,10 +13,11 @@ int main(int argc,char** argv)
   unsigned int sn(4);
   unsigned int n_levels(3);
   double tolerance(1e-10);
-  double inc_bottom(-1.);
-  double inc_right(0.);
-  double inc_top(-1.);
-  double inc_left(0.);
+  double inc_bottom(10.);
+  BC_TYPE bottom_bc_type(most_normal);
+  BC_TYPE right_bc_type(reflective);
+  BC_TYPE top_bc_type(vacuum);
+  BC_TYPE left_bc_type(reflective);
   FE_TYPE fe_type(pwld);
   QUAD_TYPE quad_type(ls);
   SOLVER_TYPE solver_type(gmres);
@@ -102,8 +103,7 @@ int main(int argc,char** argv)
   sigma_s[2][1][5] = 7.5;
   sigma_s[2][2][0] = 30.;
 
-  // Need to use AT_DATA instead of hard coding the path
-  string filename("/home/bruno/Documents/Transport/janus/tests/parameters_2.inp");
+  string filename("parameters_2.inp");
 
   PARAMETERS param(&filename);
 
@@ -117,12 +117,15 @@ int main(int argc,char** argv)
 
   // Check the number of level
   assert(n_levels==param.Get_n_levels());
+
+  // Check the boundary condition types
+  assert(bottom_bc_type==param.Get_bottom_bc_type());
+  assert(right_bc_type==param.Get_right_bc_type());
+  assert(top_bc_type==param.Get_top_bc_type());
+  assert(left_bc_type==param.Get_left_bc_type());
   
-  // Check the incoming fluxes
+  // Check the incoming flux
   assert(inc_bottom==param.Get_inc_bottom());
-  assert(inc_right==param.Get_inc_right());
-  assert(inc_top==param.Get_inc_top());
-  assert(inc_left==param.Get_inc_left());
 
   // Check the intensity of the source
   for (unsigned int i=0; i<3; ++i)

@@ -9,6 +9,11 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   // Open the file to read it
   ifstream parameters_file(parameters_filename->c_str(),ios::in);
 
+  string weight_sum_str;
+  string bottom_bc_type_str;
+  string left_bc_type_str;
+  string right_bc_type_str;
+  string top_bc_type_str;
   string fe_type_str;
   string fokker_planck_str;
   string galerkin_str;
@@ -45,6 +50,18 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   
   // Read the maximum number of iterations
   parameters_file>>max_it;
+
+  // Read the sum of the weight for the quadrature
+  parameters_file>>weight_sum_str;
+  if (weight_sum_str.compare("2_PI")==0 || weight_sum_str.compare("2_pi")==0)
+    weight_sum = 2.*M_PI;
+  else
+  {
+    if (weight_sum_str.compare("4_PI")==0 || weight_sum_str.compare("4_pi")==0)
+      weight_sum = 4.*M_PI;
+    else
+      weight_sum = 1.0;
+  }
 
   // Read the verbosity of the code
   parameters_file>>verbose;
@@ -159,14 +176,112 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   src.resize(n_src);
   for (unsigned int i=0; i<n_src; ++i)
     parameters_file>>src[i];
-  // Read bottom incoming flux
-  parameters_file>>inc_bottom;
-  // Read right incoming flux
-  parameters_file>>inc_right;
-  // Read top incoming flux
-  parameters_file>>inc_top;
-  // Read left incoming
-  parameters_file>>inc_left;
+  
+  // Read the type of boundary condition on the bottom side
+  parameters_file>>bottom_bc_type_str;
+  if (bottom_bc_type_str.compare("vacuum")==0)
+    bottom_bc_type = vacuum;
+  else
+  {
+    if (bottom_bc_type_str.compare("reflective")==0)
+      bottom_bc_type = reflective;
+    else
+    {
+      if (bottom_bc_type_str.compare("most_normal")==0)
+        bottom_bc_type = most_normal;
+      else
+      {
+        if (bottom_bc_type_str.compare("isotropic")==0)
+          bottom_bc_type = isotropic;
+        else
+        {
+          cout<<"Unknown boundary condition type on the bottom boundary."<<endl;
+          assert(false);
+        }
+      }
+      // Read bottom incoming flux
+      parameters_file>>inc_bottom;
+    }
+  }
+  // Read the type of boundary condition on the right side
+  parameters_file>>right_bc_type_str;
+  if (right_bc_type_str.compare("vacuum")==0)
+    right_bc_type = vacuum;
+  else
+  {
+    if (right_bc_type_str.compare("reflective")==0)
+      right_bc_type = reflective;
+    else
+    {
+      if (right_bc_type_str.compare("most_normal")==0)
+        right_bc_type = most_normal;
+      else
+      {
+        if (right_bc_type_str.compare("isotropic")==0)
+          right_bc_type = isotropic;
+        else
+        {
+          cout<<"Unknown boundary condition type on the right boundary."<<endl;
+          assert(false);
+        }
+      }
+      // Read right incoming flux
+      parameters_file>>inc_right;
+    }
+  }
+  // Read the type of boundary condition on the top side
+  parameters_file>>top_bc_type_str;
+  if (top_bc_type_str.compare("vacuum")==0)
+    top_bc_type = vacuum;
+  else
+  {
+    if (top_bc_type_str.compare("reflective")==0)
+      top_bc_type = reflective;
+    else
+    {
+      if (top_bc_type_str.compare("most_normal")==0)
+        top_bc_type = most_normal;
+      else
+      {
+        if (top_bc_type_str.compare("isotropic")==0)
+          top_bc_type = isotropic;
+        else
+        {
+          cout<<"Unknown boundary condition type on the top boundary."<<endl;
+          assert(false);
+        }
+      }
+      // Read right incoming flux
+      parameters_file>>inc_top;
+    }
+  }
+  // Read the type of boundary condition on the left side
+  parameters_file>>left_bc_type_str;
+  if (left_bc_type_str.compare("vacuum")==0)
+    left_bc_type = vacuum;
+  else
+  {
+    if (left_bc_type_str.compare("reflective")==0)
+      left_bc_type = reflective;
+    else
+    {
+      if (left_bc_type_str.compare("most_normal")==0)
+        left_bc_type = most_normal;
+      else
+      {
+        if (left_bc_type_str.compare("isotropic")==0)
+          left_bc_type = isotropic;
+        else
+        {
+          cout<<"Unknown boundary condition type on the left boundary."<<endl;
+          assert(false);
+        }
+      }
+      // Read right incoming flux
+      parameters_file>>inc_left;
+    }
+  }
+
   // Read the total and the scattering cross section
   d_vector correction_vector;
   if (transport_correction==true && optimal==false)

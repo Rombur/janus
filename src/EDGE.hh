@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include "Teuchos_SerialDenseVector.hpp"
+#include "PARAMETERS.hh"
 
 using namespace std;
 
@@ -25,13 +26,6 @@ class EDGE
     /// Return true if the edge is interior of the domain.
     bool Is_interior() const;
 
-    /// Set the flag to flag to true if the edge is on the reflective
-    /// boundary.
-    void Set_reflective_boundary();
-
-    /// Return true if the edge is on the reflective boundary.
-    bool Is_reflective() const;
-
     /// Return true if the coordinates are the same that the one of the edge.
     /// The order does not matter.
     bool Has_same_coord(d_vector &v0,d_vector &v1) const;
@@ -39,6 +33,14 @@ class EDGE
     /// Return the type of the edge type (interior, bottom_boundary,
     /// right_bloundary, top_boundary or left_boundary).
     EDGE_TYPE Get_edge_type() const;
+
+    /// Return the type of boundary condition of the edge (vacuum, isotropic,
+    /// most_normal or reflective)
+    BC_TYPE Get_bc_type()  const;
+
+    /// Set the type of boundary condition of the edge (vacuum, isotropic,
+    /// most normal  or reflective)
+    void Set_bc_type(BC_TYPE type);
 
     /// Get the global id of the edge.
     unsigned int Get_gid() const;
@@ -90,9 +92,9 @@ class EDGE
   private :
     /// Flag to know if the edge is inside the medium, on the bottom boundary, on the
     /// the right boundary, on the top boundary or on the left boundary.
-    EDGE_TYPE type;
-    /// Flag for the reflective boundary.
-    bool reflective_boundary;
+    EDGE_TYPE edge_type;
+    /// Flag to know what type of boundary applies to the edge.
+    BC_TYPE bc_type;
     /// Global ID of the edge.
     unsigned int gid;
     /// Length of the edge.
@@ -110,19 +112,19 @@ class EDGE
     vector<Teuchos::SerialDenseVector<int,double> > external_normal;
 };
 
-inline void EDGE::Set_reflective_boundary()
-{
-  reflective_boundary = true;
-}
-
-inline bool EDGE::Is_reflective() const
-{
-  return reflective_boundary;
-}
-
 inline EDGE_TYPE EDGE::Get_edge_type() const
 {
-  return type;
+  return edge_type;
+}
+
+inline BC_TYPE EDGE::Get_bc_type()  const
+{
+  return bc_type;
+}
+
+inline void EDGE::Set_bc_type(BC_TYPE type)
+{
+  bc_type = type;
 }
 
 inline unsigned int EDGE::Get_gid() const

@@ -2,7 +2,6 @@
 #define _TRANSPORT_OPERATOR_HH_
 
 #include <cassert>
-#include "gsl_math.h"
 #include "Epetra_Comm.h"
 #include "Epetra_MultiVector.h"
 #include "Epetra_Map.h"
@@ -26,15 +25,16 @@ typedef vector<unsigned int> ui_vector;
  * @todo The reflective boundary can be optimized. Right now it uses to much
  * memory.
  * @todo Reflective boundary with angular multigrid.
- *
  */
 class TRANSPORT_OPERATOR : public Epetra_Operator
 {
   public :
+    /// Constructor used when the angular multigrid is not used.
     TRANSPORT_OPERATOR(DOF_HANDLER* dof,PARAMETERS const* param,
         QUADRATURE* quad,Epetra_Comm const* comm,
         Epetra_Map const* flux_moments_map);
 
+    /// Constructor used for the angular multigrid.
     TRANSPORT_OPERATOR(DOF_HANDLER* dof,PARAMETERS const* param,
         vector<QUADRATURE*> const* quad_vector,Epetra_Comm const* comm, 
         Epetra_Map const* flux_moments_map,unsigned int level,unsigned int max_level,
@@ -113,6 +113,10 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
         CELL const* const cell,unsigned int idir,unsigned int n_mom,
         unsigned int dof_per_cell) const;
 
+    /// Update the SAF stored in TRANSPORT_SOLVER::flux_moments at the end of the 
+    /// sweep.
+    void Update_saf(Epetra_MultiVector &flux_moments,unsigned int n_dir) const;
+
     /// Current level in the angular multigrid.
     unsigned int lvl;
     /// Maximum level in the angular multigrid.
@@ -121,8 +125,12 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     const unsigned int n_dof;
     /// Epetra communicator.
     Epetra_Comm const* comm;
-    /// Epetra map
+    /// Epetra map associated to #flux_moments
     Epetra_Map const* flux_moments_map;
+    /// Epetra map associated to the significant angular fluxes.
+    Epetra_Map* saf_map;
+    /// Store the Significant Angular Fluxes.
+    Epetra_MultiVector* saf;
     /// To speed up the sweep the Teuchos Vector are constructed in the
     /// constructor and then reused in the sweep.
     vector<Teuchos::SerialDenseVector<int,double>* > teuchos_vector;

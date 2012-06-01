@@ -26,8 +26,8 @@ int main(int argc,char** argv)
   src_id[1] = 1;
   src_id[2] = 0;
   src_id[3] = 0;
-  // Need to use AT_DATA instead of hard coding the path
-  string filename("/home/bruno/Documents/Transport/janus/tests/geometry_rec.inp");
+
+  string filename("geometry_rec.inp");
 
   TRIANGULATION triangulation(&filename);
   triangulation.Read_geometry();
