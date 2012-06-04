@@ -493,7 +493,7 @@ class MESH_GENERATOR(object) :
   def Prepend_n_cells(self) :
     """Prepend the number of cells to the output file."""
 
-    self.output_file = open(self.output_filename+'.mesh','r+')
+    self.output_file = open(self.output_filename+'.inp','r+')
     old = self.output_file.read()
     self.output_file.seek(0)
     self.output_file.write('polygon\n')

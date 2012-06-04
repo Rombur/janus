@@ -369,8 +369,8 @@ class TRIANGLE(object) :
   def Generate_quadrilateral_mesh(self) :
     """Generate a polygonal mesh."""
 
-    self.output_file('polygon\n')
-    self.output_file(str(4*len(self.triangles))+'\n')
+    self.output_file.write('polygon\n')
+    self.output_file.write(str(3*len(self.triangles))+'\n')
 
     for triangle in self.triangles :
       mat_id = int(triangle[1]%100)
@@ -436,7 +436,7 @@ class TRIANGLE(object) :
   def Prepend_n_cells(self) :
     """Prepend the number of cells to the output file."""
 
-    self.output_file = open(self.output_filename+'.mesh','r+')
+    self.output_file = open(self.output_filename+'.inp','r+')
     old = self.output_file.read()
     self.output_file.seek(0)
     self.output_file.write('polygon\n')

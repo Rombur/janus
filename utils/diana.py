@@ -9,15 +9,15 @@ import MESH_GENERATOR
 import TRIANGLE
 
 input_filename = 'test.1'
-output_filename = 'output'
+output_filename = 'geometry'
 mesh_type = 'hexagon'
 alpha = 0.3 # Used only for random mesh and z-mesh
 x = [0.,1.] # Used only for random mesh
 y = [0.,1.] # Used only for random mesh
 side = 0.5 # Used only for hexagon mesh
 n_layer = 3 # Used only for hexagon mesh
-mat_id = [1,2,3,4] # Used only for hexagon mesh
-src_id = [4,3,2,1] # Used only for hexagon mesh
+mat_id = [1,1,1,2] # Used only for hexagon mesh
+src_id = [1,1,1,0] # Used only for hexagon mesh
 
 triangle_mesh = ['polygon','triangle','quadrilateral']
 if mesh_type in triangle_mesh :
