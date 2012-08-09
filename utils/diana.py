@@ -10,14 +10,15 @@ import TRIANGLE
 
 input_filename = 'test.1'
 output_filename = 'geometry'
-mesh_type = 'hexagon'
+mesh_type = 'amr'
 alpha = 0.3 # Used only for random mesh and z-mesh
 x = [0.,1.] # Used only for random mesh
 y = [0.,1.] # Used only for random mesh
-side = 0.5 # Used only for hexagon mesh
-n_layer = 3 # Used only for hexagon mesh
-mat_id = [1,1,1,2] # Used only for hexagon mesh
-src_id = [1,1,1,0] # Used only for hexagon mesh
+side = 0.05 # Used only for hexagon mesh
+n_layer = 30 # Used only for hexagon mesh
+n_refinement = 20 # Used only for amr mesh
+mat_id = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2] # Used only for hexagon mesh
+src_id = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0] # Used only for hexagon mesh
 
 triangle_mesh = ['polygon','triangle','quadrilateral']
 if mesh_type in triangle_mesh :
@@ -39,3 +40,5 @@ else :
     mesh.Generate_z_mesh(alpha)
   elif mesh_type=='hexagon' :
     mesh.Generate_hexagon_mesh(side,n_layer,mat_id,src_id)
+  elif mesh_type=='amr' :
+    mesh.Generate_amr_mesh(n_refinement)

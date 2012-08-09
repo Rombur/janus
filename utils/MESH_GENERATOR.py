@@ -383,8 +383,8 @@ class MESH_GENERATOR(object) :
         self.Write_cell(cell)
 # Build the triangular cells in the top left corner
       vertices = []
-      vertices.append([x_coord[i][-2],y_offset])
       vertices.append([x_coord[i][-1],y_offset])      
+      vertices.append([x_coord[i][-2],y_offset])
       vertices.append([x_coord[i][-2],y_offset-0.5*side])
       cell = [3,vertices,0,0]
       self.mesh.append(cell)
@@ -420,8 +420,8 @@ class MESH_GENERATOR(object) :
       y_offset -= side
 # Build the triangular cell in the top left corner
     vertices = []
-    vertices.append([x_coord[-2][-2],y_offset])
     vertices.append([x_coord[-2][-1],y_offset])      
+    vertices.append([x_coord[-2][-2],y_offset])
     vertices.append([x_coord[-2][-2],y_offset-0.5*side])
     cell = [3,vertices,0,0]
     self.mesh.append(cell)
@@ -434,6 +434,378 @@ class MESH_GENERATOR(object) :
     cell = [3,vertices,0,0]
     self.mesh.append(cell)
     self.Write_cell(cell)
+
+#----------------------------------------------------------------------------#
+
+  def Generate_amr_mesh(self,n) :
+    """Generate a mesh which mimics an mesh generated using adaptive mesh
+    refinement."""
+
+# Mesh the lower left square
+    self.Build_square_zone_amr(n)
+# Mesh the middle layer
+    self.Build_middle_zone_amr(n)
+# Mesh the external layer
+    self.Build_external_zone_amr(n)
+
+# Close output file
+    self.output_file.close()
+
+# Prepend the number of cells now that the mesh is built
+    self.Prepend_n_cells()
+
+# Create a file readable by apollo
+    self.Create_apollo_file()
+
+#----------------------------------------------------------------------------#
+
+  def Build_square_zone_amr(self,n) :
+    """Mesh the square zone of the amr mesh."""
+
+    y_offset = 0.
+    for i in xrange(n) :
+      x_offset = 0.
+      for j in xrange(n) :
+        if i<n-2 and j<n-2 :
+          delta = 2./n
+          vertices = []
+          vertices.append([x_offset,y_offset])
+          vertices.append([x_offset+delta,y_offset])
+          vertices.append([x_offset+delta,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta])
+          cell = [4,vertices,1,1]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        elif i==n-1 or j==n-1:
+          delta = 1./n
+          y_offset_tmp = y_offset
+          for ii in xrange(2) :
+            x_offset_tmp = x_offset
+            for jj in xrange(2) :
+              vertices = []
+              vertices.append([x_offset_tmp,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp+delta])
+              vertices.append([x_offset_tmp,y_offset_tmp+delta])
+              cell = [4,vertices,1,1]
+              self.mesh.append(cell)
+              self.Write_cell(cell)
+              x_offset_tmp += delta  
+            y_offset_tmp += delta
+        else :
+          delta = 2./n
+          vertices = []
+          if i==n-2 and j!=n-2 :
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset+delta/2.,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [5,vertices,1,1]
+          elif i!=n-2 and j==n-2 :
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta/2.])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [5,vertices,1,1]
+          else :
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta/2.])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset+delta/2.,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [6,vertices,1,1]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        x_offset += 2./n
+      y_offset += 2./n  
+
+#----------------------------------------------------------------------------#
+
+  def Build_middle_zone_amr(self,n):
+    """Mesh the middle zone of the amr mesh."""
+  
+# Mesh the lower square
+    y_offset = 0.
+    for i in xrange(n) :
+      x_offset = 2.
+      delta = 1./n
+      y_offset_tmp = y_offset
+      for ii in xrange(2) :
+        x_offset_tmp = x_offset
+        for jj in xrange(2) :
+          vertices = []
+          vertices.append([x_offset_tmp,y_offset_tmp])
+          vertices.append([x_offset_tmp+delta,y_offset_tmp])
+          vertices.append([x_offset_tmp+delta,y_offset_tmp+delta])
+          vertices.append([x_offset_tmp,y_offset_tmp+delta])
+          cell = [4,vertices,2,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+          x_offset_tmp += delta  
+        y_offset_tmp += delta
+      
+      x_offset += 2./n
+      for j in xrange(1,n) :
+        if j<n-1 :  
+          delta = 2./n
+          vertices = []
+          if j==1 :
+            if j==n-2 :
+              vertices.append([x_offset,y_offset])
+              vertices.append([x_offset+delta,y_offset])
+              vertices.append([x_offset+delta,y_offset+delta/2.])
+              vertices.append([x_offset+delta,y_offset+delta])
+              vertices.append([x_offset,y_offset+delta])
+              vertices.append([x_offset,y_offset+delta/2.])
+              cell = [6,vertices,2,0]
+            else :
+              vertices.append([x_offset,y_offset])
+              vertices.append([x_offset+delta,y_offset])
+              vertices.append([x_offset+delta,y_offset+delta])
+              vertices.append([x_offset,y_offset+delta])
+              vertices.append([x_offset,y_offset+delta/2.])
+              cell = [5,vertices,2,0]
+          elif j==n-2 :
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta/2.])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [5,vertices,2,0]
+          else :
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [4,vertices,2,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        else :
+          delta = 1./n
+          y_offset_tmp = y_offset
+          for ii in xrange(2) :
+            x_offset_tmp = x_offset
+            for jj in xrange(2) :
+              vertices = []
+              vertices.append([x_offset_tmp,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp+delta])
+              vertices.append([x_offset_tmp,y_offset_tmp+delta])
+              cell = [4,vertices,2,0]
+              self.mesh.append(cell)
+              self.Write_cell(cell)
+              x_offset_tmp += delta  
+            y_offset_tmp += delta
+        x_offset += 2./n
+      y_offset += 2./n
+
+# Mesh the upper rectangle
+    y_offset = 2.
+    for i in xrange(n) :
+      x_offset = 0
+      for j in xrange(2*n) :
+        if (i==0 and x_offset<=2.+1e-3/n) or (j==2*n-1) or (i==n-1) :
+          delta = 1./n
+          y_offset_tmp = y_offset
+          for ii in xrange(2) :
+            x_offset_tmp = x_offset
+            for jj in xrange(2) :
+              vertices = []
+              vertices.append([x_offset_tmp,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp+delta])
+              vertices.append([x_offset_tmp,y_offset_tmp+delta])
+              cell = [4,vertices,2,0]
+              self.mesh.append(cell)
+              self.Write_cell(cell)
+              x_offset_tmp += delta  
+            y_offset_tmp += delta
+        elif (i==1 and i==n-2) or (i==0 and n==3) :
+            delta = 2./n
+            vertices = []
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta/2.,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset+delta/2.,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [6,vertices,2,0]
+            self.mesh.append(cell)
+            self.Write_cell(cell)
+        elif i==1 and j<n+1 :
+            delta = 2./n
+            vertices = []
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta/2.,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [5,vertices,2,0]
+            self.mesh.append(cell)
+            self.Write_cell(cell)
+        elif i==n-2 and j<2*n-2 :
+            delta = 2./n
+            vertices = []
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset+delta/2.,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [5,vertices,2,0]
+            self.mesh.append(cell)
+            self.Write_cell(cell)
+        elif j==2*n-2 :
+          delta = 2./n
+          vertices = []
+          if i==n-2:
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta/2.])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset+delta/2.,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [6,vertices,2,0]
+          else :
+            vertices.append([x_offset,y_offset])
+            vertices.append([x_offset+delta,y_offset])
+            vertices.append([x_offset+delta,y_offset+delta/2.])
+            vertices.append([x_offset+delta,y_offset+delta])
+            vertices.append([x_offset,y_offset+delta])
+            cell = [5,vertices,2,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        elif i==0 and np.abs(x_offset-(2.+2./n))<1e-3 :
+          delta = 2./n
+          vertices = []
+          vertices.append([x_offset,y_offset])
+          vertices.append([x_offset+delta,y_offset])
+          vertices.append([x_offset+delta,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta/2.])
+          cell = [5,vertices,2,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        else :
+          delta = 2./n
+          vertices = []
+          vertices.append([x_offset,y_offset])
+          vertices.append([x_offset+delta,y_offset])
+          vertices.append([x_offset+delta,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta])
+          cell = [4,vertices,2,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        x_offset += 2./n
+      y_offset += 2./n  
+
+#----------------------------------------------------------------------------#
+
+  def Build_external_zone_amr(self,n):
+    """Mesh the external zone of the amr mesh."""
+
+# Mesh the lower rectangle
+    y_offset = 0.
+    for i in xrange(2*n) :
+      x_offset = 4.
+      delta = 1./n
+      y_offset_tmp = y_offset
+      for ii in xrange(2) :
+        x_offset_tmp = x_offset
+        for jj in xrange(2) :
+          vertices = []
+          vertices.append([x_offset_tmp,y_offset_tmp])
+          vertices.append([x_offset_tmp+delta,y_offset_tmp])
+          vertices.append([x_offset_tmp+delta,y_offset_tmp+delta])
+          vertices.append([x_offset_tmp,y_offset_tmp+delta])
+          cell = [4,vertices,0,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+          x_offset_tmp += delta  
+        y_offset_tmp += delta
+      x_offset += 2./n
+
+      delta = 2./n
+      vertices = []
+      vertices.append([x_offset,y_offset])
+      vertices.append([x_offset+delta,y_offset])
+      vertices.append([x_offset+delta,y_offset+delta])
+      vertices.append([x_offset,y_offset+delta])
+      vertices.append([x_offset,y_offset+delta/2.])
+      cell = [5,vertices,0,0]
+      self.mesh.append(cell)
+      self.Write_cell(cell)
+      x_offset += 2./n
+
+      for j in xrange(2,3*n) :
+        vertices = []
+        vertices.append([x_offset,y_offset])
+        vertices.append([x_offset+delta,y_offset])
+        vertices.append([x_offset+delta,y_offset+delta])
+        vertices.append([x_offset,y_offset+delta])
+        cell = [4,vertices,0,0]
+        self.mesh.append(cell)
+        self.Write_cell(cell)
+        x_offset += 2./n
+      y_offset += 2./n
+
+# Mesh the upper rectangle
+    y_offset = 4.
+    for i in xrange(3*n) :
+      x_offset = 0
+      for j in xrange(5*n) :
+        if i==0 and x_offset<= 4.+1e-3/n :
+          delta = 1./n
+          y_offset_tmp = y_offset
+          for ii in xrange(2) :
+            x_offset_tmp = x_offset
+            for jj in xrange(2) :
+              vertices = []
+              vertices.append([x_offset_tmp,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp])
+              vertices.append([x_offset_tmp+delta,y_offset_tmp+delta])
+              vertices.append([x_offset_tmp,y_offset_tmp+delta])
+              cell = [4,vertices,0,0]
+              self.mesh.append(cell)
+              self.Write_cell(cell)
+              x_offset_tmp += delta  
+            y_offset_tmp += delta
+        elif i==0 and np.abs(x_offset-(4.+2./n))<1e-3 :
+          delta = 2./n
+          vertices = []
+          vertices.append([x_offset,y_offset])
+          vertices.append([x_offset+delta,y_offset])
+          vertices.append([x_offset+delta,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta/2.])
+          cell = [5,vertices,0,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        elif i==1 and x_offset<=4.+1e-3/n :
+          delta = 2./n
+          vertices = []
+          vertices.append([x_offset,y_offset])
+          vertices.append([x_offset+delta/2.,y_offset])
+          vertices.append([x_offset+delta,y_offset])
+          vertices.append([x_offset+delta,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta])
+          cell = [5,vertices,0,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        else :
+          delta = 2./n
+          vertices = []
+          vertices.append([x_offset,y_offset])
+          vertices.append([x_offset+delta,y_offset])
+          vertices.append([x_offset+delta,y_offset+delta])
+          vertices.append([x_offset,y_offset+delta])
+          cell = [4,vertices,0,0]
+          self.mesh.append(cell)
+          self.Write_cell(cell)
+        x_offset += 2./n
+      y_offset += 2./n  
 
 #----------------------------------------------------------------------------#
 

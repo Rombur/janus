@@ -114,7 +114,7 @@ void TRIANGULATION::Read_geometry()
         if (coord[0]<left_value)
           left_value = coord[0];
         if (coord[0]>right_value)
-          right_value = coord[1];
+          right_value = coord[0];
         if (coord[1]<bottom_value)
           bottom_value = coord[1];
         if (coord[1]>top_value)

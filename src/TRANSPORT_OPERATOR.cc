@@ -465,7 +465,7 @@ Teuchos::SerialDenseVector<int,double> TRANSPORT_OPERATOR::Get_saf(
   }
   if (edge->Get_edge_type()==top_boundary)
   {
-    if ((idir>n_dir_quad) && (idir<2*n_dir_quad))
+    if ((idir>=n_dir_quad) && (idir<2*n_dir_quad))
       reflec_dir = idir-n_dir_quad;
     else
     {
@@ -475,11 +475,11 @@ Teuchos::SerialDenseVector<int,double> TRANSPORT_OPERATOR::Get_saf(
   }
   if (edge->Get_edge_type()==bottom_boundary)
   {
-    if (idir<n_dir)
+    if (idir<n_dir_quad)
       reflec_dir = idir+n_dir_quad;
     else
     {
-      assert(idir>3*n_dir_quad);
+      assert(idir>=3*n_dir_quad);
       reflec_dir = idir-n_dir_quad;
     }
   }
@@ -580,7 +580,7 @@ void TRANSPORT_OPERATOR::Project_vector(Epetra_MultiVector &x,Epetra_MultiVector
     // rules
     double n_dir(y_size/dof_handler->Get_n_dof());
     double sn(-1.+sqrt(1.+2.*n_dir));
-    const unsigned int common((pow(sn,2.)-1.)/2.*dof_handler->Get_n_dof());
+    const unsigned int common((pow(sn,2.)+sn)/2.*dof_handler->Get_n_dof());
     const unsigned int skip((sn/2.+1.)*dof_handler->Get_n_dof());
     for (unsigned int i=0; i<common; ++i)
       x[0][i] += y[0][i];
