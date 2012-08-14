@@ -9,6 +9,9 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   // Open the file to read it
   ifstream parameters_file(parameters_filename->c_str(),ios::in);
 
+  // Check that the file was open properly
+  assert(parameters_file);
+
   string weight_sum_str;
   string bottom_bc_type_str;
   string left_bc_type_str;

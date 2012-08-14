@@ -11,8 +11,11 @@ TRIANGULATION::TRIANGULATION(string* geometry_inputfile) :
 
 void TRIANGULATION::Read_geometry()
 {
-  // Open the file to read it.
+  // Open the file to read it
   ifstream geometry_file(geometry_filename->c_str(),ios::in);
+
+  // Check that the file was open properly
+  assert(geometry_file);
 
   // Read the cell type: quadrilateral or polygon
   string cell_type_str;
@@ -34,7 +37,7 @@ void TRIANGULATION::Read_geometry()
     n_cells = n_x*n_y;
     mat_id.resize(n_cells);
     src_id.resize(n_cells);
-    // Fill n_vertices with 4 since all the cells are rectangular.
+    // Fill n_vertices with 4 since all the cells are rectangular
     n_vertices.resize(n_cells,4);
     // Read the abscissae
     const unsigned int n_x_vertices(n_x+1);

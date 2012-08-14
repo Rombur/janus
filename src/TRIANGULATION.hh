@@ -1,6 +1,7 @@
 #ifndef _TRIANGULATION_HH_
 #define _TRIANGULATION_HH_
 
+#include <cassert>
 #include <fstream>
 #include <map>
 #include <set>

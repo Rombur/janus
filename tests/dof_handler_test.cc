@@ -173,29 +173,29 @@ int main(int argc,char** argv)
   assert((*sweep_ordering)[4]==1);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,6);
-  assert((*sweep_ordering)[0]==1);
-  assert((*sweep_ordering)[1]==3);
+  assert((*sweep_ordering)[0]==3);
+  assert((*sweep_ordering)[1]==1);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==2);
   assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,7);
-  assert((*sweep_ordering)[0]==2);
-  assert((*sweep_ordering)[1]==3);
+  assert((*sweep_ordering)[0]==3);
+  assert((*sweep_ordering)[1]==2);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==1);
   assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,8);
-  assert((*sweep_ordering)[0]==1);
-  assert((*sweep_ordering)[1]==3);
+  assert((*sweep_ordering)[0]==3);
+  assert((*sweep_ordering)[1]==1);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==2);
   assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(1,2);
-  assert((*sweep_ordering)[0]==1);
-  assert((*sweep_ordering)[1]==3);
+  assert((*sweep_ordering)[0]==3);
+  assert((*sweep_ordering)[1]==1);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==2);
   assert((*sweep_ordering)[4]==0);
@@ -204,12 +204,12 @@ int main(int argc,char** argv)
   assert((*sweep_ordering)[0]==1);
   assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
-  assert((*sweep_ordering)[3]==0);
-  assert((*sweep_ordering)[4]==2);
+  assert((*sweep_ordering)[3]==2);
+  assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,10);
-  assert((*sweep_ordering)[0]==0);
-  assert((*sweep_ordering)[1]==1);
+  assert((*sweep_ordering)[0]==1);
+  assert((*sweep_ordering)[1]==0);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==3);
   assert((*sweep_ordering)[4]==2);
@@ -218,15 +218,15 @@ int main(int argc,char** argv)
   assert((*sweep_ordering)[0]==1);
   assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
-  assert((*sweep_ordering)[3]==0);
-  assert((*sweep_ordering)[4]==2);
+  assert((*sweep_ordering)[3]==2);
+  assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(1,3);
   assert((*sweep_ordering)[0]==1);
   assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
-  assert((*sweep_ordering)[3]==0);
-  assert((*sweep_ordering)[4]==2);
+  assert((*sweep_ordering)[3]==2);
+  assert((*sweep_ordering)[4]==0);
 
   // Check the cell iterator
   vector<CELL*>::iterator cell(dof_handler.Get_mesh_begin());

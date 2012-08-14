@@ -108,8 +108,8 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
 
   for (unsigned int q=0; q<n_quad; ++q)
   {
-    const unsigned int n_dir(quad[q]->Get_n_dir());
-    for (unsigned int idir=0; idir<n_dir; ++idir)
+    const unsigned int half_n_dir(quad[q]->Get_n_dir()/2);
+    for (unsigned int idir=0; idir<half_n_dir; ++idir)
     {
       // Sweep ordering for a direction
       ui_vector (idir_sweep_order);
@@ -128,7 +128,6 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
             ((edge->Get_edge_type()==bottom_boundary) && (omega(1)>0.)) ||
             ((edge->Get_edge_type()==top_boundary) && (omega(1)<0.)))
           incoming_edges.push_back(edge->Get_gid());
-        
       }
       while (incoming_edges.size()!=0)
       {
@@ -210,6 +209,17 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
           incoming_edges.push_back(tmp);
         }
       }
+      sweep_order[q].push_back(idir_sweep_order);
+    }
+    // Because of the symmetry of the quadratures only half of the sweep
+    // orders have to be computed. The others half is just the opposite of the
+    // first half.
+    const unsigned int n_cells(triangulation->Get_n_cells());
+    for (unsigned int idir=0; idir<half_n_dir; ++idir)
+    {
+      ui_vector idir_sweep_order(n_cells);
+      for (unsigned int i=0; i<n_cells; ++i)
+        idir_sweep_order[n_cells-(i+1)] = sweep_order[q][idir][i];
       sweep_order[q].push_back(idir_sweep_order);
     }
 

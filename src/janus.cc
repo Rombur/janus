@@ -1,3 +1,13 @@
+/**
+ * \mainpage
+ * Documentation of Janus. This code solves the one-group transport equation
+ * for neutrons on rectangular domains using the Sn method and discontinuous
+ * finite elements. The input files of the code can be generated using Diana
+ * (geometry) and Mercury (parameters). The output file can be converted to a
+ * silo file using Apollo.
+ */
+
+
 #include <cassert>
 #include <string>
 #include "mpi.h"
