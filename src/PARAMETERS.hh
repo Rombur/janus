@@ -1,13 +1,13 @@
 #ifndef _PARAMETERS_HH_
 #define _PARAMETERS_HH_
 
-#include <cassert>
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
 #include "gsl_math.h"
+#include "EXCEPTION.hh"
 
 using namespace std;
 

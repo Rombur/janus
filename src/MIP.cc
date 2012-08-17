@@ -145,8 +145,7 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
 #endif
     default :
       {
-        cout<<"Unknown solver for MIP."<<endl;
-        assert(false);
+        Check(false,"Unknown solver for MIP.");
       }
   }
 }

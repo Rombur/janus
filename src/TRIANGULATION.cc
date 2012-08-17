@@ -15,7 +15,8 @@ void TRIANGULATION::Read_geometry()
   ifstream geometry_file(geometry_filename->c_str(),ios::in);
 
   // Check that the file was open properly
-  assert(geometry_file);
+  Check(geometry_file.good(),string ("Unable to open the file " + 
+        *geometry_filename + " containing the geometry."));
 
   // Read the cell type: quadrilateral or polygon
   string cell_type_str;

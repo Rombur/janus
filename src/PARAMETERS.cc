@@ -10,7 +10,8 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   ifstream parameters_file(parameters_filename->c_str(),ios::in);
 
   // Check that the file was open properly
-  assert(parameters_file);
+  Check(parameters_file.good(),string ("Unable to open the file " + 
+        *parameters_filename + " containing the parameters."));
 
   string weight_sum_str;
   string bottom_bc_type_str;
@@ -194,13 +195,9 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
         bottom_bc_type = most_normal;
       else
       {
-        if (bottom_bc_type_str.compare("isotropic")==0)
-          bottom_bc_type = isotropic;
-        else
-        {
-          cout<<"Unknown boundary condition type on the bottom boundary."<<endl;
-          assert(false);
-        }
+        Check(bottom_bc_type_str.compare("isotropic")==0,
+            "Unknown boundary condition type on the bottom boundary.");
+        bottom_bc_type = isotropic;
       }
       // Read bottom incoming flux
       parameters_file>>inc_bottom;
@@ -220,13 +217,9 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
         right_bc_type = most_normal;
       else
       {
-        if (right_bc_type_str.compare("isotropic")==0)
-          right_bc_type = isotropic;
-        else
-        {
-          cout<<"Unknown boundary condition type on the right boundary."<<endl;
-          assert(false);
-        }
+        Check(right_bc_type_str.compare("isotropic")==0,
+            "Unknown boundary condition type on the right boundary.");
+        right_bc_type = isotropic;
       }
       // Read right incoming flux
       parameters_file>>inc_right;
@@ -246,13 +239,9 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
         top_bc_type = most_normal;
       else
       {
-        if (top_bc_type_str.compare("isotropic")==0)
-          top_bc_type = isotropic;
-        else
-        {
-          cout<<"Unknown boundary condition type on the top boundary."<<endl;
-          assert(false);
-        }
+        Check(top_bc_type_str.compare("isotropic")==0,
+            "Unknown boundary condition type on the top boundary.");
+        top_bc_type = isotropic;
       }
       // Read right incoming flux
       parameters_file>>inc_top;
@@ -272,13 +261,9 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
         left_bc_type = most_normal;
       else
       {
-        if (left_bc_type_str.compare("isotropic")==0)
+        Check(left_bc_type_str.compare("isotropic")==0,
+            "Unknown boundary condition type on the left boundary.");
           left_bc_type = isotropic;
-        else
-        {
-          cout<<"Unknown boundary condition type on the left boundary."<<endl;
-          assert(false);
-        }
       }
       // Read right incoming flux
       parameters_file>>inc_left;

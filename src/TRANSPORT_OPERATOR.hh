@@ -135,7 +135,6 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// constructor and then reused in the sweep.
     vector<Teuchos::SerialDenseVector<int,double>* > teuchos_vector;
     /// Scattering source for each moment.
-    /// @todo Change the Teuchos::SerialDenseVector to Epetra_MultiVector.
     vector<Teuchos::SerialDenseVector<int,double> >* scattering_src;
     /// Pointer to the dof_handler object. (DOF_HANDLER is not const because
     /// we need to return an iterator on the cells).

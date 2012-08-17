@@ -1,7 +1,6 @@
 #ifndef _MIP_HH_
 #define _MIP_HH
 
-#include <cassert>
 #include <cmath>
 #include <iostream>
 #include "gsl_math.h"
@@ -20,6 +19,7 @@
 #include "Teuchos_SerialDenseVector.hpp"
 #include "CELL.hh"
 #include "EDGE.hh"
+#include "EXCEPTION.hh"
 #include "DOF_HANDLER.hh"
 #include "FINITE_ELEMENT.hh"
 #include "PARAMETERS.hh"

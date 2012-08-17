@@ -1,13 +1,13 @@
 #ifndef _TRIANGULATION_HH_
 #define _TRIANGULATION_HH_
 
-#include <cassert>
 #include <fstream>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
 #include "EDGE.hh"
+#include "EXCEPTION.hh"
 
 using namespace std;
 

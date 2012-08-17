@@ -652,8 +652,7 @@ void LS::Build_octant()
       }
     default :
       {
-        cout<<"This quadrature ordr does not exist."<<endl;
-        assert(false);
+        Check(false,"This quadrature ordr does not exist.");
       }
   } 
 }

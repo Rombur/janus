@@ -1,7 +1,7 @@
 #ifndef _LS_HH_
 #define _LS_HH_
 
-#include <cassert>
+#include "EXCEPTION.hh"
 #include "QUADRATURE.hh"
 
 using namespace std;
