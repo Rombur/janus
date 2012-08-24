@@ -2,6 +2,7 @@
 
 MIP::MIP(unsigned int level,DOF_HANDLER* dof,PARAMETERS const* param,
     QUADRATURE const* quad,Epetra_Comm const* comm) :
+  group(0),
   lvl(level),
   ia(NULL),
   ja(NULL),
@@ -69,6 +70,7 @@ MIP::~MIP()
 
   if (a!=NULL)
   {
+#ifdef AGMG
     int n(dof_handler->Get_n_dof());
     int iprint(6);
     int ijob(-1); 
@@ -77,11 +79,10 @@ MIP::~MIP()
     double tol(parameters->Get_tolerance()/100.);
     double* f(NULL);
     double* x(NULL);
-#ifdef AGMG
     dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
-#endif 
     delete a;
     a = NULL;
+#endif 
   }
 
   if (ja!=NULL)
@@ -94,6 +95,56 @@ MIP::~MIP()
   {
     delete ia;
     ia = NULL;
+  }
+}
+
+void MIP::Set_group(unsigned int g)
+{
+  if (g!=group)
+  {
+    group = g;
+
+    if (ml_prec!=NULL)
+    {
+      delete ml_prec;
+      ml_prec = NULL;
+    }
+    if (sgs_prec!=NULL)
+    {
+      delete sgs_prec;
+      sgs_prec = NULL;
+    }
+    if (A!=NULL)
+    {
+      delete A;
+      A = NULL;
+    }
+    if (a!=NULL)
+    {
+#ifdef AGMG
+      int n(dof_handler->Get_n_dof());
+      int iprint(6);
+      int ijob(-1); 
+      int iter(parameters->Get_max_it());
+      int nrest(1);
+      double tol(parameters->Get_tolerance()/100.);
+      double* f(NULL);
+      double* x(NULL);
+      dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
+      delete a;
+      a = NULL;
+#endif 
+    }
+    if (ja!=NULL)
+    {
+      delete ja;
+      ja = NULL;
+    }
+    if (ia!=NULL)
+    {
+      delete ia;
+      ia = NULL;
+    }
   }
 }
 
@@ -150,12 +201,6 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
   }
 }
 
-void MIP::Free_ml()
-{
-  delete ml_prec;
-  ml_prec = NULL;
-}
-
 void MIP::Compute_n_entries_per_row(int* n)
 {
   vector<CELL*>::iterator cell(dof_handler->Get_mesh_begin());
@@ -210,7 +255,7 @@ void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
     for (unsigned int i=i_min; i<i_max; ++i)
       x_cell(i-i_min) = x[0][i];
     blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
-        (*cell)->Get_sigma_s(lvl,0),mass_matrix->values(),
+        (*cell)->Get_sigma_s(group,lvl,0),mass_matrix->values(),
         mass_matrix->stride(),x_cell.values(),1,0.,b_cell.values(),1);
 
     // Compute the reflective boundary term.
@@ -278,9 +323,9 @@ void MIP::Build_lhs()
     {
       for (unsigned int j=i_min; j<i_max; ++j)
       {                                    
-        values[j-i_min] = ((*cell)->Get_sigma_t(lvl)-(*cell)->Get_sigma_s(lvl,0))*
-          (*mass_matrix)(i-i_min,j-i_min)+(*cell)->Get_diffusion_coefficient()*
-          (*stiffness_matrix)(i-i_min,j-i_min);
+        values[j-i_min] = ((*cell)->Get_sigma_t(group,lvl)-
+            (*cell)->Get_sigma_s(group,lvl,0))*(*mass_matrix)(i-i_min,j-i_min)+
+          (*cell)->Get_diffusion_coefficient()*(*stiffness_matrix)(i-i_min,j-i_min);
       }
 
       A->InsertGlobalValues(i,i_max-i_min,&values[0],&indices[0]);
@@ -360,8 +405,8 @@ void MIP::Build_lhs()
       coupling_edge_deln_matrix_p += coupling_edge_deln_matrix_p_y;
       const double h_m(cell->Get_orthogonal_length(edge->Get_lid(0)));
       const double h_p(next_cell->Get_orthogonal_length(edge->Get_lid(1)));
-      const double D_m(cell->Get_diffusion_coefficient());
-      const double D_p(next_cell->Get_diffusion_coefficient());
+      const double D_m(cell->Get_diffusion_coefficient(group));
+      const double D_p(next_cell->Get_diffusion_coefficient(group));
       const double K(Compute_penalty_coefficient(D_m,D_p,h_m,h_p,true));
       int* indices = new int[cell_last_dof-cell_first_dof];
       int* next_indices = new int[next_cell_last_dof-next_cell_first_dof];
@@ -467,7 +512,7 @@ void MIP::Build_lhs()
             edge_deln_matrix_m_x);
         edge_deln_matrix_m += edge_deln_matrix_m_y;
         const double h_m(cell->Get_orthogonal_length(edge->Get_lid(0)));
-        const double D_m(cell->Get_diffusion_coefficient());
+        const double D_m(cell->Get_diffusion_coefficient(group));
         const double K(Compute_penalty_coefficient(D_m,0.,h_m,0.,false));
         int* indices = new int[cell_last_dof-cell_first_dof];
         double* values = new double[cell_last_dof-cell_first_dof]; 

@@ -8,6 +8,7 @@
 #include "Teuchos_SerialDenseMatrix.hpp"
 #include "BLD.hh"
 #include "CELL.hh"
+#include "CROSS_SECTIONS.hh"
 #include "EDGE.hh"
 #include "FINITE_ELEMENT.hh"
 #include "PARAMETERS.hh"
@@ -29,7 +30,8 @@ typedef vector<unsigned int> ui_vector;
 class DOF_HANDLER
 {
   public :
-    DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param);
+    DOF_HANDLER(TRIANGULATION* triang,PARAMETERS const &param,
+        CROSS_SECTIONS const &cross_sections);
 
     ~DOF_HANDLER();
 

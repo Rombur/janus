@@ -67,11 +67,12 @@ class MIP
 
     ~MIP();
 
+    /// Set the value of group and if necessary delete A or a and the
+    /// preconditioner for CG.
+    void Set_group(unsigned int g);
+
     /// Solve the MIP equation and add the solution to the flux moments.
     void Solve(Epetra_MultiVector &flux_moments);
-
-    /// Delete the ML object before MPI_Finalize() is called.
-    void Free_ml();
 
     /// Return the time needed to build the matrix.
     double Get_building_mip_time() const;
@@ -146,9 +147,11 @@ class MIP
         const unsigned int n_dof) const;
 
     /// Convert the fortran rhs to Epetra rhs.
-    void Convert_rhs_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof)    
+    void Convert_rhs_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof) 
       const;
 
+    /// Current group.
+    unsigned int group;
     /// Level of the cross sections to use.
     unsigned int lvl;
     /// Indicate where every row starts.

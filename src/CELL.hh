@@ -25,8 +25,8 @@ class CELL
 {
   public :
     CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
-        unsigned int last_dof,double source,d_vector sigma_t,vector<d_vector> sigma_s,
-        vector<EDGE*> edges,FINITE_ELEMENT* fe);
+        unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
+        vector<vector<d_vector> > sigma_s,vector<EDGE*> edges,FINITE_ELEMENT* fe);
 
     ~CELL();
 
@@ -43,18 +43,20 @@ class CELL
     ///+1.
     unsigned int Get_last_dof() const;
 
-    /// Return the intensity of the source in the cell.
-    double Get_source() const;
+    /// Return the intensity of the source in the cell for a given energy
+    /// group.
+    double Get_source(unsigned int g) const;
 
-    /// Return the diffusion coefficient in the cell.
-    double Get_diffusion_coefficient() const;
+    /// Return the diffusion coefficient in the cell for a given energy group.
+    double Get_diffusion_coefficient(unsigned int group) const;
 
-    /// Return the \f$\Sigma_t\f$ in the cell for a given angular level.
-    double Get_sigma_t(unsigned int lvl) const;
+    /// Return the \f$\Sigma_t\f$ in the cell for a given energy group and 
+    /// angular level.
+    double Get_sigma_t(unsigned int group,unsigned int lvl) const;
 
-    /// Return the \f$\Sigma_s\f$ in the cell for a given angular level and a
-    /// given moment.
-    double Get_sigma_s(unsigned int lvl,unsigned int mom) const;
+    /// Return the \f$\Sigma_s\f$ in the cell for a given energy group, angular 
+    /// level, and moment.
+    double Get_sigma_s(unsigned int group,unsigned int lvl,unsigned int mom) const;
           
     /// Return the orthogonal length of the cell associated to the ith edge of
     /// the cell.
@@ -96,20 +98,23 @@ class CELL
     double perimeter;
     /// Area of the cell.
     double area;
-    /// Intensity of the source in the cell.
-    double source;
-    /// Diffusion coefficient in the cell.
-    double D;
-    /// Total cross section in the cell. sigma_t is a vector because of the
-    /// angular multigrid.
-    d_vector sigma_t;
-    /// Scattering cross section in the cell. sigma_s is a vector of vector
-    /// because of the angular multigrid.
-    vector<d_vector> sigma_s;
+    /// Intensity of the source in the cell. source is a vector because of
+    /// energy groups.
+    d_vector source;
+    /// Diffusion coefficient in the cell. D is a vector because of energy
+    /// groups.
+    d_vector D;
     /// Ortogonal length of the cell associated to each edge.
     d_vector orthogonal_length;
     /// Vector of the pointer to edges which compose the cell.
     vector<EDGE*> cell_edges;
+    /// Total cross section in the cell. sigma_t is a vector of vector because of 
+    /// energy groups and angular multigrid.
+    vector<d_vector> sigma_t;
+    /// Scattering cross section in the cell. sigma_s is a vector of vector of
+    /// vector because of energy groups, the angular multigrid, and the
+    /// Legendre expansion of the scattering cross sections.
+    vector<vector<d_vector> > sigma_s;
     /// Finite elements associated to the cell.
     FINITE_ELEMENT* fe;
 };
@@ -134,24 +139,25 @@ inline unsigned int CELL::Get_last_dof() const
   return last_dof;
 }
 
-inline double CELL::Get_source() const
+inline double CELL::Get_source(unsigned int group) const
 {
-  return source;
+  return source[group];
 }
 
-inline double CELL::Get_diffusion_coefficient() const
+inline double CELL::Get_diffusion_coefficient(unsigned int group) const
 {
-  return D;
+  return D[group];
 }
 
-inline double CELL::Get_sigma_t(unsigned int lvl) const
+inline double CELL::Get_sigma_t(unsigned int group,unsigned int lvl) const
 {
-  return sigma_t[lvl];
+  return sigma_t[group][lvl];
 }
 
-inline double CELL::Get_sigma_s(unsigned int lvl,unsigned int mom) const
+inline double CELL::Get_sigma_s(unsigned int group,unsigned int lvl,
+    unsigned int mom) const
 {
-  return sigma_s[lvl][mom];
+  return sigma_s[group][lvl][mom];
 }
 inline double CELL::Get_orthogonal_length(unsigned int i)
 {

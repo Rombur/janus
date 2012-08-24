@@ -13,11 +13,16 @@ CELL::CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
   cell_edges(edges),
   fe(fe)
 {
-  unsigned int n_level(sigma_t.size());
-  if (sigma_s[n_level-1].size()>1)
-    D = 1./(3.*(sigma_t[n_level-1]-sigma_s[n_level-1][1]));
-  else
-    D = 1./(3.*sigma_t[n_level-1]);
+  unsigned int n_groups(sigma_t.size());
+  unsigned int n_level(sigma_t[0].size());
+  D.resize(n_groups);
+  for (unsigned int g=0; g<n_groups; ++g)
+  {
+    if (sigma_s[n_level-1].size()>1)
+      D[g] = 1./(3.*(sigma_t[g][n_level-1]-sigma_s[g][g][n_level-1][1]));
+    else
+      D[g] = 1./(3.*sigma_t[g][n_level-1]);
+  }
 
   // Compute the area and the perimeter of the cell.
   Compute_area_and_perimeter();

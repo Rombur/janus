@@ -97,6 +97,9 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// object to x. x and y are the same on output.
     void Project_vector(Epetra_MultiVector &x,Epetra_MultiVector &y) const;
 
+    /// Set the current group.
+    void Set_group(unsigned int g);
+
     /// Return a pointer to the MIP DSA.
     MIP* Get_mip();
 
@@ -121,6 +124,8 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     unsigned int lvl;
     /// Maximum level in the angular multigrid.
     unsigned int max_lvl;
+    /// Current group.
+    unsigned int group;
     /// Number of degrees of freedom associated to the problem.
     const unsigned int n_dof;
     /// Epetra communicator.

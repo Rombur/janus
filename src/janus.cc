@@ -18,11 +18,12 @@ using namespace std;
 
 int main(int argc,char** argv)
 {
-  Check(argc==4,"Wrong number of inputs");
+  Check(argc==5,"Wrong number of inputs");
 
   string geometry_filename(argv[1]);
   string parameters_filename(argv[2]);
-  string output_filename(argv[3]);
+  string cross_sections_filename(argv[3]);
+  string output_filename(argv[4]);
 
   MPI_Init(&argc,&argv);
   Epetra_MpiComm comm(MPI_COMM_WORLD);
@@ -31,7 +32,7 @@ int main(int argc,char** argv)
   {
     cout<<"Initialization"<<endl;
     TRANSPORT_SOLVER transport_solver(&geometry_filename,&parameters_filename,
-        &output_filename,&comm);
+        &cross_sections_filename,&output_filename,&comm);
     cout<<"Start solving"<<endl;
     transport_solver.Solve();
     cout<<"End solving"<<endl;

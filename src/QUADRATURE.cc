@@ -157,6 +157,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((l<sn) && ((m+l)%2==0))
           {
             M2D(idir,pos) = Ye[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }
@@ -166,6 +167,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((l<=sn) && ((m+l)%2==0))
           {
             M2D(idir,pos) = Yo[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }
@@ -185,6 +187,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((m+l)%2==0)
           {
             M2D(idir,pos) = Ye[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }
@@ -194,6 +197,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((m+l)%2==0)
           {
             M2D(idir,pos) = Yo[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }

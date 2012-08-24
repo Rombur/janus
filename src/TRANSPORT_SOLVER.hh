@@ -12,7 +12,9 @@
 #include "Epetra_MultiVector.h"
 #include "Teuchos_Time.hpp"
 #include "CELL.hh"
+#include "CROSS_SECTIONS.hh"
 #include "DOF_HANDLER.hh"
+#include "EXCEPTION.hh"
 #include "FINITE_ELEMENT.hh"
 #include "GLC.hh"
 #include "LS.hh"
@@ -32,8 +34,8 @@ using namespace std;
 class TRANSPORT_SOLVER
 {
   public :
-    TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,string* outputfile,
-        Epetra_MpiComm* mpi_comm);
+    TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,string* xs_inputfile,
+        string* outputfile,Epetra_MpiComm* mpi_comm);
 
     ~TRANSPORT_SOLVER();
 
@@ -45,6 +47,10 @@ class TRANSPORT_SOLVER
     void Write_in_file();
 
   private :
+    /// Compute the convergence over a supergroup or over all the groups.
+    double Compute_convergence(Epetra_MultiVector const &flux,
+        Epetra_MultiVector const &old_flux, const unsigned int n) const;
+
     /// Size of the flux moments vector.
     unsigned int flux_moments_size;
     /// Timer for the initialization.
@@ -63,6 +69,8 @@ class TRANSPORT_SOLVER
     Epetra_MultiVector* flux_moments;
     /// Epetra map associated to the #flux_moments.
     Epetra_Map* flux_moments_map;
+    /// Cross sections of the problem.
+    CROSS_SECTIONS cross_sections;
     /// Parameters of the problem.
     PARAMETERS parameters;
     /// Triangulation of the problems.

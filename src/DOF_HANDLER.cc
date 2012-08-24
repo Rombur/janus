@@ -1,6 +1,7 @@
 #include "DOF_HANDLER.hh"
 
-DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
+DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS const &param,
+    CROSS_SECTIONS const &cross_sections) :
   n_sf_per_dir(0),
   n_dof(0),
   max_dof_per_cell(0),
@@ -68,8 +69,8 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
     // Create the cells and append them in mesh
     CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
           param.Get_src(triangulation->Get_src_id(i)),
-          param.Get_sigma_t(triangulation->Get_mat_id(i)),
-          param.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
+          cross_sections.Get_sigma_t(triangulation->Get_mat_id(i)),
+          cross_sections.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
     mesh.push_back(cell);
     start_dof += fe->Get_dof_per_cell();
     if (fe->Get_dof_per_cell()>max_dof_per_cell)

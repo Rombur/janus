@@ -4,7 +4,7 @@ PARAMETERS::PARAMETERS(string* parameters_inputfile) :
   parameters_filename(parameters_inputfile)
 {}
 
-void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
+void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_mat)
 {
   // Open the file to read it
   ifstream parameters_file(parameters_filename->c_str(),ios::in);
@@ -19,7 +19,7 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   string right_bc_type_str;
   string top_bc_type_str;
   string fe_type_str;
-  string fokker_planck_str;
+  string xs_type_str;
   string galerkin_str;
   string mip_str;
   string mip_solver_type_str;
@@ -49,11 +49,20 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     }
   }
 
-  // Read the tolerance on the solver
-  parameters_file>>tolerance;
+  // Read the tolerance for the inner solver
+  parameters_file>>inner_tolerance;
+
+  // Read the tolerance for the outer solvers
+  parameters_file>>group_tolerance;
   
-  // Read the maximum number of iterations
-  parameters_file>>max_it;
+  // Read the maximum number of inner iterations
+  parameters_file>>max_inner_it;
+  
+  // Read the maximum number of supergroup iterations
+  parameters_file>>max_supergroup_it;
+  
+  // Read the maximum number of group iterations
+  parameters_file>>max_group_it;
 
   // Read the sum of the weight for the quadrature
   parameters_file>>weight_sum_str;
@@ -70,12 +79,22 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   // Read the verbosity of the code
   parameters_file>>verbose;
   
-  // Read if Fokker-Planck cross-section is used
-  parameters_file>>fokker_planck_str;
-  if (fokker_planck_str.compare("true")==0)
-    fokker_planck = true;
+  // Read the type of cross section file
+  parameters_file>>xs_type_str;
+  if (xs_type_str.compare("fp")==0)
+    xs_type = fp;
   else
-    fokker_planck = false;
+  {
+    if (xs_type_str.compare("regular")==0)
+      xs_type = regular;
+    else
+    {
+      if (xs_type_str.compare("regular_exs")==0)
+        xs_type = regular_exs;
+      else
+        xs_type = cepxs;
+    }
+  }
   
   // Read if transport correction is used
   parameters_file>>transport_correction_str;
@@ -161,9 +180,6 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     galerkin = true;
   else
     galerkin = false;
-  
-  // Read L_max
-  parameters_file>>L_max;
   
   // Read order of the Sn order
   parameters_file>>sn;
@@ -270,116 +286,12 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     }
   }
 
-  // Read the total and the scattering cross section
-  d_vector correction_vector;
-  if (transport_correction==true && optimal==false)
-    correction_vector.resize(n_mat,0.);
-  sigma_t.resize(n_mat);
-  unsigned int j_max(0);
-  for (unsigned int jj=0; jj<=L_max; ++jj)
-    j_max += jj+1;
-  sigma_s.resize(n_mat,d_vector(j_max,0.));
-  if (fokker_planck==true)
-    alpha.resize(n_mat);
-  for (unsigned int i=0; i<n_mat; ++i)
-  {
-    parameters_file>>sigma_t[i];
-    if (fokker_planck==true)
-      parameters_file>>alpha[i];
-    else
-    {                               
-      for (unsigned int j=0; j<j_max; ++j)
-        parameters_file>>sigma_s[i][j];
-      if (transport_correction==true && optimal==false)
-        parameters_file>>correction_vector[i];
-    }
-  }
-
   // Close the file
   parameters_file.close();
 
-  Apply_parameters(n_mat,correction_vector);
-}
-
-void PARAMETERS::Apply_parameters(const unsigned int n_mat,
-    d_vector const &correction_vector)
-{
-  // Create the Fokker-Planck cross-section
-  if (fokker_planck==true)
-    Build_fokker_planck_xs(n_mat);
+  // Compute the number of level when the angular multigrid is used
   if (multigrid==false)
     n_levels = 1;
   else
     n_levels = ceil(log(double(sn))/log(2.));
-  if (mip==true)
-    ++n_levels;
-  // Loop over the level of the angular multigrid
-  sigma_t_lvl.resize(n_mat,d_vector(n_levels,0.));
-  sigma_s_lvl.resize(n_mat,vector<d_vector>(n_levels));
-  double L(L_max); 
-  for (unsigned int lvl=0; lvl<n_levels; ++lvl)
-  {
-    for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
-    {
-      double L_2(ceil(L/2.));
-      sigma_t_lvl[i_mat][lvl] = sigma_t[i_mat];
-      sigma_s_lvl[i_mat][lvl] = d_vector(sigma_s[i_mat].begin(),
-          sigma_s[i_mat].end());
-      // Apply the transport correction
-      if (transport_correction==true)
-      {
-        double correction(0);
-        if (optimal==false)
-        {
-          if (lvl==0)
-            correction = correction_vector[i_mat];
-          else
-            correction = sigma_s_lvl[i_mat][lvl-1][L_2]; 
-        }
-        Apply_transport_correction(i_mat,lvl,L_2,correction);
-      }
-    }
-    L = ceil(L/2.);
-    if (L==1.)
-      L = 0.;
-  }
-}
-
-void PARAMETERS::Build_fokker_planck_xs(const unsigned int n_mat)
-{               
-  for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
-  {
-    unsigned int index(0);
-    for (unsigned int l=0; l<L_max; ++l)
-      for (unsigned int m=0; m<=l; ++m)
-      {
-        sigma_s[i_mat][index] = alpha[i_mat]/2.*(L_max*(L_max+1)-l*(l+1));
-        ++index;
-      }
-  }
-}
-
-void PARAMETERS::Apply_transport_correction(unsigned int i_mat,unsigned int lvl,
-    double L,double correction)
-{
-  if (optimal==true)
-  {
-    if (L==0.)
-      correction = 0.;
-    else
-    {
-      if (L==1.)
-        L = 0.;
-      unsigned int pos(0);
-      for (unsigned int jj=0; jj<=L; ++jj)
-        pos += jj+1;
-      correction = (sigma_s_lvl[i_mat][lvl][pos]+sigma_s_lvl[i_mat][lvl].back())/2.;
-    }
-  }
-  
-  sigma_t_lvl[i_mat][lvl] -= correction;
-  d_vector::iterator sigma_s(sigma_s_lvl[i_mat][lvl].begin());
-  d_vector::iterator sigma_s_end(sigma_s_lvl[i_mat][lvl].end());
-  for (; sigma_s<sigma_s_end; ++sigma_s)
-    *sigma_s -= correction;
 }

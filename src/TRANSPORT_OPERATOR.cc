@@ -222,7 +222,7 @@ void TRANSPORT_OPERATOR::Compute_scattering_source(Epetra_MultiVector const &x) 
       for (unsigned int j=j_min; j<j_max; ++j)
         x_cell.values()[j-j_min] = x[0][i*n_dof+j];
       blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
-          (*cell)->Get_sigma_s(lvl,i),mass_matrix->values(),
+          (*cell)->Get_sigma_s(group,lvl,quad->Get_l(i)),mass_matrix->values(),
           mass_matrix->stride(),x_cell.values(),1,0.,scat_src_cell->values(),1);
       for (unsigned int j=j_min; j<j_max; ++j)
         (*scattering_src)[i].values()[j] += scat_src_cell->values()[j-j_min];
@@ -272,7 +272,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
       
       // Volumetric term of the lhs : 
       // -omega_x * x_grad_matrix - omega_y *y_grad_matrix + sigma_t mass
-      A.scale(cell->Get_sigma_t(lvl));
+      A.scale(cell->Get_sigma_t(group,lvl));
       for (unsigned int i=0; i<dof_per_cell_square; ++i)
         A.values()[i] += -omega_0*x_grad_matrix->values()[i]-omega_1*
           y_grad_matrix->values()[i];
@@ -289,7 +289,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
       {
         // Divide the source by the sum of the weights so the input source is 
         // easier to set
-        const double src(cell->Get_source()/param->Get_weight_sum());
+        const double src(cell->Get_source(group)/param->Get_weight_sum());
         for (unsigned int k=0; k<dof_per_cell; ++k)
         {
           double const* mass_matrix_k((*mass_matrix)[k]);
@@ -434,9 +434,9 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
 }
 
 Teuchos::SerialDenseVector<int,double> TRANSPORT_OPERATOR::Get_saf(
-    unsigned int idir,unsigned int n_dir,unsigned int n_mom,unsigned int dof_per_cell,
-    Epetra_MultiVector &flux_moments,CELL const* const cell,
-    EDGE const* const edge) const
+    unsigned int idir,unsigned int n_dir,unsigned int n_mom,
+    unsigned int dof_per_cell,Epetra_MultiVector &flux_moments,
+    CELL const* const cell,EDGE const* const edge) const
 {
   const unsigned int n_dir_quad(n_dir/4);
   unsigned int reflec_dir(idir);
@@ -592,4 +592,11 @@ void TRANSPORT_OPERATOR::Project_vector(Epetra_MultiVector &x,Epetra_MultiVector
     for (unsigned int i=0; i<y_size; ++i)
       x[0][i] += y[0][i];
   }
+}
+
+void TRANSPORT_OPERATOR::Set_group(unsigned int g)
+{
+  group = g;
+  if (param->Get_mip()==true)
+    precond->Set_group(g);
 }

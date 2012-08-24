@@ -36,13 +36,18 @@ enum QUAD_TYPE{glc,ls};
 /// (GMRES with estimation of the condition number) or bicgstab (BiCGSTAB).
 enum SOLVER_TYPE{si,gmres,gmres_condnum,bicgstab};
 
+/// Enum on the type of cross section file: fp (Fokker-Planck), regular,
+/// regular_exs (regular with energy deposition cross sections), cepxs
+/// (CEPXS).
+enum XS_TYPE{fp,regular,regular_exs,cepxs};
+
 /**
  * Read and store all the parameters. Parameters are read in the following
  * order: solver type, tolerance, maximum number of iterations, Fokker-Planck
  * flag, transport correction flag, optimal transport correction flag,
  * multigrid flag, mip flag, quadrature type, Galerkin flag, L_max, Sn order,
  * fe type, intensities of the source, bottom incoming flux, right incoming
- * flux, top incoming flux, left incoming flux, sigma_t, sigma_s.
+ * flux, top incoming flux, left incoming flux.
  */
 class PARAMETERS
 {
@@ -50,10 +55,13 @@ class PARAMETERS
     PARAMETERS(string* parameters_inputfile);
 
     /// Read the parameters input file.
-    void Read_parameters(unsigned int n_src,unsigned int n_mat);
+    void Read_parameters(const unsigned int n_src,const unsigned int n_mat);
 
     /// Return the flag on the transport correction.
     bool Get_transport_correction() const;
+
+    /// Return the flag on the optimal transport correction.
+    bool Get_optimal_tc() const;
 
     /// Return the flag on Galerkin quadrature.
     bool Get_galerkin() const;
@@ -64,23 +72,30 @@ class PARAMETERS
     /// Return true if MIP is used.
     bool Get_mip() const;
 
-    /// Return the maximum number of iterations.
-    unsigned int Get_max_it() const;
+    /// Return the maximum number of inner iterations.
+    unsigned int Get_max_inner_it() const;
 
-    /// Return #L_max.
-    unsigned int Get_L_max() const;
+    /// Return the maximum number of iterations on each supergroup.
+    unsigned int Get_max_supergroup_it() const;
+
+    /// Return the maximum number of iterations on all the groups.
+    unsigned int Get_max_group_it() const;
 
     /// Return Sn order.
     unsigned int Get_sn_order() const;
 
-    /// Return the number of "angular levels" (DSA counts as an angular level).
-    unsigned int Get_n_levels() const;
+    /// Return the number of "angular levels" (DSA counts as an angular
+    /// level).
+    inline unsigned int Get_n_levels() const;
 
     /// Return the level of verbosity of the code.
     unsigned int Get_verbose() const;
 
-    /// Return the relative tolerance.
-    double Get_tolerance() const;
+    /// Return the relative tolerance for the inner solver.
+    double Get_inner_tolerance() const;
+
+    /// Return the relative tolerance for the group and supergroup solver.
+    double Get_group_tolerance() const;
 
     /// Return the incoming flux of the bottom boundary.
     double Get_inc_bottom() const;
@@ -134,26 +149,11 @@ class PARAMETERS
     /// with SGS preconditioning, CG with ML preconditioning or AGMG).
     MIP_SOLVER_TYPE Get_mip_solver_type() const;
 
-    /// Return sigma_t for the material i.
-    d_vector Get_sigma_t(unsigned int i) const;
-
-    /// Return sigma_s for the material i.
-    vector<d_vector> Get_sigma_s(unsigned int i) const;
+    /// Return the type of cross section file used (Fokker-Planck, regular,
+    /// regular with energy deposition cross sections, CEPXS).
+    XS_TYPE Get_xs_type() const;
 
   private :
-    /// Apply all the parameters.
-    void Apply_parameters(const unsigned int n_mat,d_vector const &correction_vector);
-
-    /// Build the Fokker-Planck cross sections.
-    void Build_fokker_planck_xs(const unsigned int n_mat);
-
-    /// Apply the "standard" extended transport correction or the optimal
-    /// transport corrections.
-    void Apply_transport_correction(unsigned int i_mat,unsigned int lvl,double L,
-        double correction);
-
-    /// If flag is true, Fokker-Planck cross-section \f$\left(\frac{\alpha}{2} (L(L+1)-l(l+1))\right)\f$ is used.
-    bool fokker_planck;
     /// If flag is true, the transport correction is used.
     bool transport_correction;
     /// If flag is true and that #transport_correction is true, the optimal
@@ -167,18 +167,22 @@ class PARAMETERS
     bool mip;
     /// If flas is true, a Galerkin quadrature is used.
     bool galerkin;
-    /// Maximum number of iterations.
-    unsigned int max_it;
-    /// L_max.
-    unsigned int L_max;
+    /// Maximum number of inner iterations.
+    unsigned int max_inner_it;
+    /// Maximum number of iterations for each supergroup.
+    unsigned int max_supergroup_it;
+    /// Maximum number of iterations over all the groups.
+    unsigned int max_group_it;
     /// Sn order.
     unsigned int sn;
     /// Number of levels of the angular multigrid.
     unsigned int n_levels;
     /// Level of verbosity of the code.
     unsigned int verbose;
-    /// Tolerance on the solver.
-    double tolerance;
+    /// Tolerance on the inner solver (SI or Krylov solver).
+    double inner_tolerance;
+    /// Tolerance on the outer solver for the groups and supergroups.
+    double group_tolerance;
     /// Bottom incoming flux.
     double inc_bottom;
     /// Right incoming flux.
@@ -208,27 +212,24 @@ class PARAMETERS
     MIP_SOLVER_TYPE mip_solver_type;
     /// Type of solver: SI, BiCGSTAB or GMRES.
     SOLVER_TYPE solver_type;
-    /// Pointer to the name of the inpuit file containing the parameters of
+    /// Type of cross section file: Fokker-Planck, regular, regular with
+    /// energy deposition cross section, CEPXS.
+    XS_TYPE xs_type;
+    /// Pointer to the name of the input file containing the parameters of
     /// the problem.
     string* parameters_filename;
     /// Values of the source.
     d_vector src;
-    /// Total cross section.
-    d_vector sigma_t;
-    /// Scattering cross section.
-    vector<d_vector> sigma_s;
-    /// \f$\alpha\f$ parameter of the Fokker-Planck cross sections.
-    d_vector alpha;
-    /// Total cross section for the different level of the angular multigrid.
-    vector<d_vector> sigma_t_lvl;
-    /// Scattering cross section for the different level of the angular
-    /// multigrid.
-    vector<vector<d_vector> > sigma_s_lvl;
 };
 
 inline bool PARAMETERS::Get_transport_correction() const
 {
   return transport_correction;
+}
+
+inline bool PARAMETERS::Get_optimal_tc() const
+{
+  return optimal;
 }
 
 inline bool PARAMETERS::Get_galerkin() const
@@ -246,14 +247,19 @@ inline bool PARAMETERS::Get_mip() const
   return mip;
 }
 
-inline unsigned int PARAMETERS::Get_max_it() const
+inline unsigned int PARAMETERS::Get_max_inner_it() const
 {
-  return max_it;
+  return max_inner_it;
 }
 
-inline unsigned int PARAMETERS::Get_L_max() const
+inline unsigned int PARAMETERS::Get_max_supergroup_it() const
 {
-  return L_max;
+  return max_supergroup_it;
+}
+
+inline unsigned int PARAMETERS::Get_max_group_it() const
+{
+  return max_group_it;
 }
 
 inline unsigned int PARAMETERS::Get_sn_order() const
@@ -265,15 +271,20 @@ inline unsigned int PARAMETERS::Get_n_levels() const
 {
   return n_levels;
 }
- 
+
 inline unsigned int PARAMETERS::Get_verbose() const
 {
   return verbose;
 }
 
-inline double PARAMETERS::Get_tolerance() const
+inline double PARAMETERS::Get_inner_tolerance() const
 {
-  return tolerance;
+  return inner_tolerance;
+}
+
+inline double PARAMETERS::Get_group_tolerance() const
+{
+  return group_tolerance;
 }
 
 inline double PARAMETERS::Get_inc_bottom() const
@@ -351,14 +362,9 @@ inline SOLVER_TYPE PARAMETERS::Get_solver_type() const
   return solver_type;
 }
 
-inline d_vector PARAMETERS::Get_sigma_t(unsigned int i) const
+inline XS_TYPE PARAMETERS::Get_xs_type() const
 {
-  return sigma_t_lvl[i];
-}
-
-inline vector<d_vector> PARAMETERS::Get_sigma_s(unsigned int i) const
-{
-  return sigma_s_lvl[i];
+  return xs_type;
 }
 
 #endif
