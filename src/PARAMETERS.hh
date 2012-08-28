@@ -45,7 +45,7 @@ enum XS_TYPE{fp,regular,regular_exs,cepxs};
  * Read and store all the parameters. Parameters are read in the following
  * order: solver type, tolerance, maximum number of iterations, Fokker-Planck
  * flag, transport correction flag, optimal transport correction flag,
- * multigrid flag, mip flag, quadrature type, Galerkin flag, L_max, Sn order,
+ * multigrid flag, mip flag, quadrature type, Galerkin flag, Sn order,
  * fe type, intensities of the source, bottom incoming flux, right incoming
  * flux, top incoming flux, left incoming flux.
  */
@@ -110,7 +110,7 @@ class PARAMETERS
     double Get_inc_left() const;
 
     /// Return the intensity of the source i.
-    double Get_src(unsigned int i) const;
+    d_vector Get_src(unsigned int i) const;
 
     /// Return the sum of the weights (1, 2pi or 4pi)
     double Get_weight_sum() const;
@@ -219,7 +219,7 @@ class PARAMETERS
     /// the problem.
     string* parameters_filename;
     /// Values of the source.
-    d_vector src;
+    vector<d_vector> src;
 };
 
 inline bool PARAMETERS::Get_transport_correction() const
@@ -307,7 +307,7 @@ inline double PARAMETERS::Get_inc_left() const
   return inc_left;
 }
 
-inline double PARAMETERS::Get_src(unsigned int i) const
+inline d_vector PARAMETERS::Get_src(unsigned int i) const
 {
   return src[i];
 }

@@ -74,9 +74,9 @@ MIP::~MIP()
     int n(dof_handler->Get_n_dof());
     int iprint(6);
     int ijob(-1); 
-    int iter(parameters->Get_max_it());
+    int iter(parameters->Get_max_inner_it());
     int nrest(1);
-    double tol(parameters->Get_tolerance()/100.);
+    double tol(parameters->Get_inner_tolerance()/100.);
     double* f(NULL);
     double* x(NULL);
     dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
@@ -125,9 +125,9 @@ void MIP::Set_group(unsigned int g)
       int n(dof_handler->Get_n_dof());
       int iprint(6);
       int ijob(-1); 
-      int iter(parameters->Get_max_it());
+      int iter(parameters->Get_max_inner_it());
       int nrest(1);
-      double tol(parameters->Get_tolerance()/100.);
+      double tol(parameters->Get_inner_tolerance()/100.);
       double* f(NULL);
       double* x(NULL);
       dagmg_(&n,a,ja,ia,f,x,&ijob,&iprint,&nrest,&iter,&tol);
@@ -255,7 +255,7 @@ void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
     for (unsigned int i=i_min; i<i_max; ++i)
       x_cell(i-i_min) = x[0][i];
     blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
-        (*cell)->Get_sigma_s(group,lvl,0),mass_matrix->values(),
+        (*cell)->Get_sigma_s(group,group,lvl,0),mass_matrix->values(),
         mass_matrix->stride(),x_cell.values(),1,0.,b_cell.values(),1);
 
     // Compute the reflective boundary term.
@@ -324,8 +324,9 @@ void MIP::Build_lhs()
       for (unsigned int j=i_min; j<i_max; ++j)
       {                                    
         values[j-i_min] = ((*cell)->Get_sigma_t(group,lvl)-
-            (*cell)->Get_sigma_s(group,lvl,0))*(*mass_matrix)(i-i_min,j-i_min)+
-          (*cell)->Get_diffusion_coefficient()*(*stiffness_matrix)(i-i_min,j-i_min);
+            (*cell)->Get_sigma_s(group,group,lvl,0))*(*mass_matrix)(i-i_min,j-i_min)+
+          (*cell)->Get_diffusion_coefficient(group)*
+          (*stiffness_matrix)(i-i_min,j-i_min);
       }
 
       A->InsertGlobalValues(i,i_max-i_min,&values[0],&indices[0]);
@@ -597,7 +598,8 @@ void MIP::Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   // Start solve_timer
   solve_timer->start();
   // Solve the MIP equation
-  solver.Iterate(parameters->Get_max_it(),parameters->Get_tolerance()/100.);
+  solver.Iterate(parameters->Get_max_inner_it(),
+      parameters->Get_inner_tolerance()/100.);
   // Stop solve_timer
   solve_timer->stop();
 
@@ -657,7 +659,8 @@ void MIP::Cg_sgs_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   // Start solve_timer
   solve_timer->start();
   // Solve the MIP equation
-  solver.Iterate(parameters->Get_max_it(),parameters->Get_tolerance()/100.);
+  solver.Iterate(parameters->Get_max_inner_it(),
+      parameters->Get_inner_tolerance()/100.);
   // Stop solve_timer
   solve_timer->stop();
 
@@ -726,7 +729,8 @@ void MIP::Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   // Start solve_timer
   solve_timer->start();
   // Solve the MIP equation
-  solver.Iterate(parameters->Get_max_it(),parameters->Get_tolerance()/100.);
+  solver.Iterate(parameters->Get_max_inner_it(),
+      parameters->Get_inner_tolerance()/100.);
   // Stop solve_timer
   solve_timer->stop();
 
@@ -740,9 +744,9 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   int n(dof_handler->Get_n_dof());
   int iprint(6);
   int ijob(2); 
-  int iter(parameters->Get_max_it());
+  int iter(parameters->Get_max_inner_it());
   int nrest(1);
-  double tol(parameters->Get_tolerance()/100.);
+  double tol(parameters->Get_inner_tolerance()/100.);
   double* f;
   double* x;
   Epetra_MultiVector epetra_x(*mip_map,1);
@@ -805,7 +809,7 @@ void MIP::Project_solution(Epetra_MultiVector &flux_moments,
           CELL* cell(dof_handler->Get_cell(edge->Get_cell_index(0)));
           const unsigned int dof_per_cell(cell->Get_last_dof()-
               cell->Get_first_dof());
-          const double D(cell->Get_diffusion_coefficient());
+          const double D(cell->Get_diffusion_coefficient(group));
           for (unsigned int idir=0; idir<n_dir; ++idir)
           {
             const unsigned int offset_1(dof_handler->Get_n_dof()*n_mom+
@@ -869,7 +873,7 @@ void MIP::Project_solution(Epetra_MultiVector &flux_moments,
           CELL* cell(dof_handler->Get_cell(edge->Get_cell_index(0)));
           const unsigned int dof_per_cell(cell->Get_last_dof()-
               cell->Get_first_dof());
-          const double D(cell->Get_diffusion_coefficient());
+          const double D(cell->Get_diffusion_coefficient(group));
           for (unsigned int idir=0; idir<n_dir; ++idir)
           {
             const unsigned int offset_1(dof_handler->Get_n_dof()*n_mom+

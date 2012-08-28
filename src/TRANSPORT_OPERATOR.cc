@@ -2,10 +2,11 @@
 
 TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
     PARAMETERS const* param, QUADRATURE* quad,Epetra_Comm const* comm,
-    Epetra_Map const* flux_moments_map) :
+    Epetra_Map const* flux_moments_map,unsigned int n_groups) :
   Epetra_Operator(),
   lvl(0),
   max_lvl(0),
+  n_groups(n_groups),
   n_dof(dof->Get_n_dof()),
   comm(comm),
   flux_moments_map(flux_moments_map),
@@ -44,10 +45,11 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
 TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
     PARAMETERS const* param,vector<QUADRATURE*> const* quad_vector,
     Epetra_Comm const* comm,Epetra_Map const* flux_moments_map,unsigned int level,
-    unsigned int max_level,MIP* preconditioner) :
+    unsigned int max_level,unsigned int n_groups,MIP* preconditioner) :
   Epetra_Operator(),
   lvl(level),
   max_lvl(max_level),
+  n_groups(n_groups),
   n_dof(dof->Get_n_dof()),
   comm(comm),
   flux_moments_map(flux_moments_map),
@@ -116,7 +118,7 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
       Epetra_MultiVector z(y);
       Epetra_Map coarse_map(n_dof*(*quad_vector)[lvl+1]->Get_n_mom(),0,*comm);
       TRANSPORT_OPERATOR coarse_transport(dof_handler,param,quad_vector,comm,
-          &coarse_map,lvl+1,max_lvl,precond);
+          &coarse_map,lvl+1,max_lvl,n_groups,precond);
 
       Epetra_MultiVector coarse_y(coarse_transport.Restrict_vector(y));
       Epetra_MultiVector coarse_x(coarse_y);
@@ -169,7 +171,7 @@ void TRANSPORT_OPERATOR::Apply_preconditioner(Epetra_MultiVector &x)
     Epetra_MultiVector y(x);
     Epetra_Map coarse_map(n_dof*(*quad_vector)[lvl+1]->Get_n_mom(),0,*comm);
     TRANSPORT_OPERATOR coarse_transport(dof_handler,param,quad_vector,comm,
-        &coarse_map,lvl+1,max_lvl,precond);
+        &coarse_map,lvl+1,max_lvl,n_groups,precond);
 
     Epetra_MultiVector coarse_y(coarse_transport.Restrict_vector(y));
     coarse_transport.Apply_preconditioner(coarse_y);
@@ -222,7 +224,7 @@ void TRANSPORT_OPERATOR::Compute_scattering_source(Epetra_MultiVector const &x) 
       for (unsigned int j=j_min; j<j_max; ++j)
         x_cell.values()[j-j_min] = x[0][i*n_dof+j];
       blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
-          (*cell)->Get_sigma_s(group,lvl,quad->Get_l(i)),mass_matrix->values(),
+          (*cell)->Get_sigma_s(group,group,lvl,quad->Get_l(i)),mass_matrix->values(),
           mass_matrix->stride(),x_cell.values(),1,0.,scat_src_cell->values(),1);
       for (unsigned int j=j_min; j<j_max; ++j)
         (*scattering_src)[i].values()[j] += scat_src_cell->values()[j-j_min];
@@ -230,7 +232,43 @@ void TRANSPORT_OPERATOR::Compute_scattering_source(Epetra_MultiVector const &x) 
   }
 }
 
-void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
+void TRANSPORT_OPERATOR::Compute_outer_scattering_source(
+    Teuchos::SerialDenseVector<int,double> &b,
+    Epetra_MultiVector const* const group_flux,CELL const &cell,
+    const unsigned int idir) const
+{
+  const unsigned int n_mom(quad->Get_n_mom());
+  const unsigned int offset(cell.Get_first_dof());
+  FINITE_ELEMENT const* const fe(cell.Get_fe());
+  unsigned int dof_per_cell(fe->Get_dof_per_cell());
+  Teuchos::SerialDenseVector<int,double> x_cell(dof_per_cell);
+  Teuchos::SerialDenseVector<int,double>* scat_src_cell(
+      teuchos_vector[dof_per_cell]);
+  Teuchos::SerialDenseMatrix<int,double> const* const mass_matrix(
+      fe->Get_mass_matrix());
+  Teuchos::SerialDenseMatrix<int,double> const* const M2D(quad->Get_M2D());
+  Teuchos::BLAS<int,double> blas;
+  for (unsigned int g=0; g<n_groups; ++g)
+  {
+    if (g!=group)
+    {
+      for (unsigned int i=0; i<n_mom; ++i)
+      {
+        const double m2d((*M2D)(idir,i));
+        for (unsigned int j=0; j<dof_per_cell; ++j)
+          x_cell.values()[j] = (*group_flux)[g][i*n_dof+j+offset];
+        blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
+            cell.Get_sigma_s(g,group,lvl,quad->Get_l(i)),mass_matrix->values(),
+            mass_matrix->stride(),x_cell.values(),1,0.,scat_src_cell->values(),1);
+        for (unsigned int j=0; j<dof_per_cell; ++j)
+          b.values()[j] += m2d*scat_src_cell->values()[j];
+      }
+    }
+  }
+}
+
+void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs,
+    Epetra_MultiVector const* const group_flux) const
 {
   const unsigned int n_cells(dof_handler->Get_n_cells());
   const unsigned int n_dir(quad->Get_n_dir());
@@ -296,6 +334,8 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
           for (unsigned int j=0; j<dof_per_cell; ++j)
               b.values()[j] += src*mass_matrix_k[j];
         }
+        // Compute the scattering source due to the other groups
+        Compute_outer_scattering_source(b,group_flux,*cell,idir);
       }
       // Surfacic terms
       bool reflective_b(false);

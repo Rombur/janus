@@ -1,7 +1,7 @@
 #include "TRANSPORT_SOLVER.hh"
 
 TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
-    string& xs_inputfile,string* outputfile,Epetra_MpiComm* mpi_comm) :
+    string* xs_inputfile,string* outputfile,Epetra_MpiComm* mpi_comm) :
   init_timer(NULL),
   calc_timer(NULL),
   outputfile(outputfile),
@@ -70,7 +70,7 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
   cout<<"Start building the quadratures"<<endl;
   unsigned int n_lvl(parameters.Get_n_levels());
   unsigned int tmp_sn(parameters.Get_sn_order());
-  unsigned int tmp_L_max(parameters.Get_L_max());
+  unsigned int tmp_L_max(cross_sections.Get_L_max());
   if (parameters.Get_mip()==true || parameters.Get_multigrid()==true)
     --n_lvl;
   quad.resize(n_lvl,NULL);
@@ -149,9 +149,9 @@ void TRANSPORT_SOLVER::Solve()
 {
   calc_timer->start();
   unsigned int group_iter(0);
-  const unsigned int max_group_it(Get_max_group_it());
-  const unsigned int max_supergroup_it(Get_max_supergroup_it());
-  const unsigned int supergroup(parameters.Get_n_grps_in_supergrp());
+  const unsigned int max_group_it(parameters.Get_max_group_it());
+  const unsigned int max_supergroup_it(parameters.Get_max_supergroup_it());
+  const unsigned int supergroup(cross_sections.Get_n_grps_in_supergrp());
   double building_mip_time(0.);
   double init_prec_mip_time(0.);
   double solve_mip_time(0.);
@@ -162,23 +162,23 @@ void TRANSPORT_SOLVER::Solve()
   {
     const unsigned int lvl(0);
     const unsigned int max_lvl(parameters.Get_n_levels()-1);
-    double group_conv(10.*parameters.Get_group_tol());
-    Epetra_MultiVector group_flux(flux_moments_map,
-        parameters.Get_n_groups());
+    double group_conv(10.*group_tol);
+    Epetra_MultiVector group_flux(*flux_moments_map,
+        cross_sections.Get_n_groups());
     Epetra_MultiVector old_group_flux(group_flux);
 
     TRANSPORT_OPERATOR transport_operator(dof_handler,&parameters,&quad,comm,
-        flux_moments_map,lvl,max_lvl);
+        flux_moments_map,lvl,max_lvl,cross_sections.Get_n_groups());
     while (group_conv>parameters.Get_group_tolerance())
     {
       // Loop over the supergroups.
-      for (unsigned int i=0; i<parameters.Get_n_supergroups(); ++i)
+      for (unsigned int i=0; i<cross_sections.Get_n_supergroups(); ++i)
       {
         unsigned int supergroup_iter(0);
         double supergroup_conv(10.*group_tol);
-        Epetra_MultiVector supergroup_flux(flux_moments_map,
-            parameters.Get_n_groups());
-        Epetra_MultiVector old_supergroup_flux(group_flux_moments);
+        Epetra_MultiVector supergroup_flux(*flux_moments_map,
+            cross_sections.Get_n_groups());
+        Epetra_MultiVector old_supergroup_flux(group_flux);
         while (supergroup_conv>group_tol)
         {   
           // Loop over the groups in a supergroup.
@@ -189,7 +189,7 @@ void TRANSPORT_SOLVER::Solve()
             transport_operator.Set_group(g);
             // Compute right-hand side of GMRES (uncollided flux moments (S*inv(L)*q))
             Epetra_MultiVector rhs(*flux_moments);
-            transport_operator.Sweep(rhs,true);
+            transport_operator.Sweep(rhs,true,&group_flux);
 
             Epetra_LinearProblem problem(&transport_operator,flux_moments,&rhs);
 
@@ -216,11 +216,11 @@ void TRANSPORT_SOLVER::Solve()
             solver.SetAztecOption(AZ_conv,AZ_rhs);
 
             // Solve the transport equation
-            solver.Iterate(parameters.Get_max_it(),inner_tol);
+            solver.Iterate(parameters.Get_max_inner_it(),inner_tol);
 
             // Store the new flux_moments
             old_supergroup_flux[j] = supergroup_flux[j];
-            supergroup_flux[j] = flux_moments;
+            supergroup_flux[j] = (*flux_moments)[0];
           }
           // Compute the convergence of the supergroup
           supergroup_conv = Compute_convergence(supergroup_flux,
@@ -241,7 +241,7 @@ void TRANSPORT_SOLVER::Solve()
       }
       // Compute the convergence over all the groups
       group_conv = Compute_convergence(group_flux,old_group_flux,
-          parameters.Get_n_groups());
+          cross_sections.Get_n_groups());
       cout<<"Convergence over all groups at iteration "<<group_iter<<": "<<
         group_conv<<endl;
       if (group_iter>=max_group_it)
@@ -250,8 +250,12 @@ void TRANSPORT_SOLVER::Solve()
     }
 
     // Apply the preconditioner to get the solution
-    for (unsigned int i=0; i<parameters.Get_n_groups());
-      transport_operator.Apply_preconditioner(&group_flux[i]);
+    for (unsigned int i=0; i<cross_sections.Get_n_groups(); ++i)
+    {
+      Epetra_MultiVector tmp(*flux_moments_map,1);
+      tmp[0] = group_flux[i];
+      transport_operator.Apply_preconditioner(tmp);
+    }
     
     // Get the elapsed times
     MIP* mip(transport_operator.Get_mip());
@@ -265,23 +269,23 @@ void TRANSPORT_SOLVER::Solve()
   {
     if (parameters.Get_solver_type()!=si)
     {
-      double group_conv(10.*parameters.Get_group_tol());
-      Epetra_MultiVector group_flux(flux_moments_map,
-          parameters.Get_n_groups());
+      double group_conv(10.*group_tol);
+      Epetra_MultiVector group_flux(*flux_moments_map,
+          cross_sections.Get_n_groups());
       Epetra_MultiVector old_group_flux(group_flux);
 
       TRANSPORT_OPERATOR transport_operator(dof_handler,&parameters,quad[0],
-          comm,flux_moments_map);
-      while (group_conv>group_inner_tol)
+          comm,flux_moments_map,cross_sections.Get_n_groups());
+      while (group_conv>group_tol)
       {
         // Loop over the supergroups.
-        for (unsigned int i=0; i<parameters.Get_n_supergroups(); ++i)
+        for (unsigned int i=0; i<cross_sections.Get_n_supergroups(); ++i)
         {
           unsigned int supergroup_iter(0);
           double supergroup_conv(10.*group_tol);
-          Epetra_MultiVector supergroup_flux(flux_moments_map,
-              parameters.Get_n_groups());
-          Epetra_MultiVector old_supergroup_flux(group_flux_moments);
+          Epetra_MultiVector supergroup_flux(*flux_moments_map,
+              cross_sections.Get_n_groups());
+          Epetra_MultiVector old_supergroup_flux(group_flux);
           while (supergroup_conv>group_tol)
           {   
             // Loop over the groups in a supergroup.
@@ -293,7 +297,7 @@ void TRANSPORT_SOLVER::Solve()
               // Compute right-hand side of GMRES (uncollided flux moments 
               // (S*inv(L)*q))
               Epetra_MultiVector rhs(*flux_moments);
-              transport_operator.Sweep(rhs,true);
+              transport_operator.Sweep(rhs,true,&group_flux);
 
               Epetra_LinearProblem problem(&transport_operator,flux_moments,&rhs);
 
@@ -320,14 +324,14 @@ void TRANSPORT_SOLVER::Solve()
               solver.SetAztecOption(AZ_conv,AZ_rhs);
 
               // Solve the transport equation
-              solver.Iterate(parameters.Get_max_it(),inner_tol);
+              solver.Iterate(parameters.Get_max_inner_it(),inner_tol);
 
               // Store the new flux_moments
               old_supergroup_flux[j] = supergroup_flux[j];
-              supergroup_flux[j] = flux_moments;
+              supergroup_flux[j] = (*flux_moments)[0];
             }
             // Compute the convergence of the supergroup
-            supergoup_conv = Compute_convergence(supergroup_flux,old_supergroup_flux,
+            supergroup_conv = Compute_convergence(supergroup_flux,old_supergroup_flux,
                 supergroup);
             if (parameters.Get_verbose()>0)
               cout<<"Convergence over the supergroup "<<i<<" at iteration "<<
@@ -345,7 +349,7 @@ void TRANSPORT_SOLVER::Solve()
         }
         // Compute the convergence over all the groups
         group_conv = Compute_convergence(group_flux,old_group_flux,
-            parameters.Get_n_groups());
+            cross_sections.Get_n_groups());
         cout<<"Convergence over all groups at iteration "<<group_iter<<": "<<
           group_conv<<endl;
         if (group_iter>=max_group_it)
@@ -356,10 +360,12 @@ void TRANSPORT_SOLVER::Solve()
       if (parameters.Get_mip()==true)
       {
         MIP* mip(transport_operator.Get_mip());
-        for (unsigned int i=0; i<parameters.Get_n_groups(); ++i)
+        for (unsigned int i=0; i<cross_sections.Get_n_groups(); ++i)
         {
+          Epetra_MultiVector tmp(*flux_moments_map,1);
+          tmp[0] = group_flux[i];
           mip->Set_group(i);
-          mip->Solve(&group_flux[i]);
+          mip->Solve(tmp);
         }
         building_mip_time = mip->Get_building_mip_time();
         solve_mip_time = mip->Get_solve_mip_time();
@@ -370,28 +376,28 @@ void TRANSPORT_SOLVER::Solve()
     }
     else
     {
-      const unsigned int max_it(parameters.Get_max_it());
-      double group_conv(10.*parameters.Get_group_tol());
-      Epetra_MultiVector group_flux(flux_moments_map,
-          parameters.Get_n_groups());
+      const unsigned int max_it(parameters.Get_max_inner_it());
+      double group_conv(10.*group_tol);
+      Epetra_MultiVector group_flux(*flux_moments_map,
+          cross_sections.Get_n_groups());
       Epetra_MultiVector old_group_flux(group_flux);
 
       MIP* precond(NULL);
       TRANSPORT_OPERATOR transport_operator(dof_handler,&parameters,quad[0],
-          comm,flux_moments_map);
+          comm,flux_moments_map,cross_sections.Get_n_groups());
 
       if (parameters.Get_mip()==true)
         precond = transport_operator.Get_mip();
       while (group_conv>group_tol)
       {
         // Loop over the supergroups.
-        for (unsigned int i=0; i<parameters.Get_n_supergroups(); ++i)
+        for (unsigned int i=0; i<cross_sections.Get_n_supergroups(); ++i)
         {
           unsigned int supergroup_iter(0);
           double supergroup_conv(10.*group_tol);
-          Epetra_MultiVector supergroup_flux(flux_moments_map,
-              parameters.Get_n_groups());
-          Epetra_MultiVector old_supergroup_flux(group_flux_moments);
+          Epetra_MultiVector supergroup_flux(*flux_moments_map,
+              cross_sections.Get_n_groups());
+          Epetra_MultiVector old_supergroup_flux(group_flux);
           while (supergroup_conv>group_tol)
           {   
             // Loop over the groups in a supergroup.
@@ -410,7 +416,8 @@ void TRANSPORT_SOLVER::Solve()
                 Epetra_BLAS blas;
 
                 transport_operator.Compute_scattering_source(*flux_moments);
-                transport_operator.Sweep(*flux_moments,true);
+                Epetra_MultiVector rhs(*flux_moments);
+                transport_operator.Sweep(rhs,true,&group_flux);
 
                 if (parameters.Get_mip()==true)
                 {
@@ -428,7 +435,7 @@ void TRANSPORT_SOLVER::Solve()
 
                 assert(diff_flux.Norm2(&num)==0);
                 assert(flux_moments->Norm2(&denom)==0);
-                convergence = num/denom;
+                double convergence(num/denom);
                 if (parameters.Get_verbose()>1)
                   cout<<"Convergence at iteration "<<i<<": "<<convergence<<endl;
                 if (convergence<inner_tol)
@@ -439,7 +446,7 @@ void TRANSPORT_SOLVER::Solve()
 
               // Store the new flux_moments
               old_supergroup_flux[j] = supergroup_flux[j];
-              supergroup_flux[j] = flux_moments;
+              supergroup_flux[j] = (*flux_moments)[0];
             }
             // Compute the convergence of the supergroup
             supergroup_conv = Compute_convergence(supergroup_flux,
@@ -460,7 +467,7 @@ void TRANSPORT_SOLVER::Solve()
         }
         // Compute the convergence over all the groups
         group_conv = Compute_convergence(group_flux,old_group_flux,
-            parameters.Get_n_groups());
+            cross_sections.Get_n_groups());
         cout<<"Convergence over all groups at iteration "<<group_iter<<": "<<
           group_conv<<endl;
         if (group_iter>=max_group_it)

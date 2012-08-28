@@ -26,7 +26,8 @@ class CELL
   public :
     CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
         unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
-        vector<vector<d_vector> > sigma_s,vector<EDGE*> edges,FINITE_ELEMENT* fe);
+        vector<vector<vector<d_vector> > > sigma_s,vector<EDGE*> edges,
+        FINITE_ELEMENT* fe);
 
     ~CELL();
 
@@ -56,7 +57,8 @@ class CELL
 
     /// Return the \f$\Sigma_s\f$ in the cell for a given energy group, angular 
     /// level, and moment.
-    double Get_sigma_s(unsigned int group,unsigned int lvl,unsigned int mom) const;
+    double Get_sigma_s(unsigned int group,unsigned int group_p,unsigned int lvl,
+        unsigned int mom) const;
           
     /// Return the orthogonal length of the cell associated to the ith edge of
     /// the cell.
@@ -114,7 +116,7 @@ class CELL
     /// Scattering cross section in the cell. sigma_s is a vector of vector of
     /// vector because of energy groups, the angular multigrid, and the
     /// Legendre expansion of the scattering cross sections.
-    vector<vector<d_vector> > sigma_s;
+    vector<vector<vector<d_vector> > > sigma_s;
     /// Finite elements associated to the cell.
     FINITE_ELEMENT* fe;
 };
@@ -154,10 +156,10 @@ inline double CELL::Get_sigma_t(unsigned int group,unsigned int lvl) const
   return sigma_t[group][lvl];
 }
 
-inline double CELL::Get_sigma_s(unsigned int group,unsigned int lvl,
-    unsigned int mom) const
+inline double CELL::Get_sigma_s(unsigned int group,unsigned int group_p,
+    unsigned int lvl,unsigned int mom) const
 {
-  return sigma_s[group][lvl][mom];
+  return sigma_s[group][group_p][lvl][mom];
 }
 inline double CELL::Get_orthogonal_length(unsigned int i)
 {

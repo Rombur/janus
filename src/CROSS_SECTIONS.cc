@@ -1,4 +1,4 @@
-#include "CROSS_SECTIONS.cc"
+#include "CROSS_SECTIONS.hh"
 
 CROSS_SECTIONS::CROSS_SECTIONS(string* cross_section_inputfile) :
   n_g_groups(0),
@@ -7,7 +7,8 @@ CROSS_SECTIONS::CROSS_SECTIONS(string* cross_section_inputfile) :
   cross_section_filename(cross_section_inputfile) 
 {}
 
-void CROSS_SECTIONS::Read_cepxs_cross_sections(const unsigned int n_mat)
+void CROSS_SECTIONS::Read_cepxs_cross_sections(const unsigned int n_mat, 
+    PERMUTATION permutation)
 {
   // Open the file to read it
   ifstream cross_section_file(cross_section_filename->c_str(),ios::in);
@@ -67,6 +68,26 @@ void CROSS_SECTIONS::Read_cepxs_cross_sections(const unsigned int n_mat)
 
   // Close the file
   cross_section_file.close();
+
+  switch (permutation)
+  {
+    case (linear) :
+      {
+        break;
+      }
+    case (log) :
+      {
+        break;
+      }
+    case (none) :
+      {
+        break;
+      }
+    default :
+      {
+        Check(false,"Unknown permutation type.");
+      }
+  }
 }
 
 void CROSS_SECTIONS::Read_regular_cross_sections(const unsigned int n_mat,
@@ -204,8 +225,9 @@ void CROSS_SECTIONS::Apply_angular_levels(sn)
   n_levels = ceil(log(double(sn))/log(2.));
   // Loop over the level of the angular multigrid
   sigma_t_lvl.resize(n_mat,vector<d_vector> (n_groups,d_vector(n_levels,0.)));
-  sigma_s_lvl.resize(n_mat,vector<vector<d_vector> >(n_groups,
-        vector<d_vector> (n_groups,d_vector(n_levels,0.))));
+  sigma_s_lvl.resize(n_mat,vector<vector<vector<d_vector> > >(n_groups,
+        vector<vector<d_vector> > (n_groups,vector<d_vector>(n_levels,
+            d_vector(L_max+1,0.)))));
   for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
   {
     for (unsigned int g=0; g<n_groups; ++g)
@@ -247,5 +269,142 @@ void CROSS_SECTIONS::Apply_transport_correction(unsigned int i_mat,unsigned int 
     d_vector::iterator sigma_s_end(sigma_s_lvl[i_mat][g][gp][lvl].end());
     for (; sigma_s<sigma_s_end; ++sigma_s)
       *sigma_s -= correction;
+  }
+}
+
+unsigned int CROSS_SECTIONS::Compute_gcd(unsigned int n_a,unsigned int n_b)
+{   
+  unsigned int tmp;
+  while (n_b)
+  {
+    tmp = n_b;
+    n_b = n_a%n_b;
+    n_a = tmp;
+  }
+
+  return n_a;
+}
+
+void CROSS_SECTION::Matrix_multiplication(const unsigned int n_mat,
+    vector<d_vector> const &permutation_m)
+{
+  vector<vector<vector<d_vector> > > result(n_mat,vector<vector<d_vector> >
+      (n_groups,vector<d_vector> (n_groups,d_vector(L_max+1,0.))));
+
+  // result = XS * P
+  for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
+    for (unsigned int g=0; g<n_groups; ++g)
+      for (unsigned int gp=0; gp<n_groups; ++gp)
+        for (unsigned int gpp=0; gpp<n_groups; ++gpp)
+          for (unsigned int l=0; l<L_max+1; ++l)
+            result[i_mat][g][gpp][l] i+= sigma_s[i_mat][g][gp][l]*
+              permutation_m[gp][gpp];
+
+  sigma_s.clear();
+  sigma_s.resize(n_mat,vector<vector<d_vector> > (n_groups,
+        vector<d_vector> (n_groups,d_vector(L_max+1,0.))));
+
+  // XS = P^t * result
+  for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
+    for (unsigned int g=0; g<n_groups; ++g)
+      for (unsigned int gp=0; gp<n_groups; ++gp)
+        for (unsigned int gpp=0; gpp<n_groups; ++gpp)
+          for (unsigned int l=0; l<L_max+1; ++l)
+            sigma_s[i][g][gpp][l] += permutation[gp][g]*
+              result[i][gp]gpp[][l];
+}
+
+void CROSS_SECTION::Vector_permutation(const unsigned int n_mat,
+    ui_vector const &permutation_v)
+{
+  for (unsigned int i_mat=0; i_mat<mat; ++i_mat)
+  {
+    d_vector e_tmp(sigma_e[i_mat]);
+    d_vector t_tmp(sigma_t[i_mat]);
+    for (unsigned int g=0; g<n_g_groups; ++g)
+    {
+      sigma_e[i_mat][permutation_v[g]] = e_tmp[g];
+      sigma_t[i_mat][permutation_v[g]] = t_tmp[g];
+    }
+  }
+}
+
+void CROSS_SECTION::Create_linear_permutation(vector<ui_vector> &permutation_m,
+    ui_vector &permutation_v,bool &identity)
+{
+  const unsigned int gcd(Compute_gcd(n_g_groups,n_e_groups));
+  n_supergroups = n_groups/gcd;
+  if (gcd!=1)
+  {
+    identity = false;
+    const unsigned int gcd_g(n_g_groups/gcd);
+    const unsigned int gcd_e(n_e_groups/gcd);
+    
+    for (unsigned int i=0; i<n_g_groups; ++i)
+    {
+      unsigned int column(i/gcd_g*(gcd_g+gcd_e)+i%gcd_g);
+      permutation_m[i][column] = 1.0;
+      permutation_v[i] = column;
+    }
+
+    for (unsigned int i=0; i<n_e_groups; ++i)
+    {
+      unsigned int column(gcd_g+i/gcd_b*(gcd_a+gcd_b)+i%gcd_b);
+      permutation_m[i+n_g_groups][column] = 1.0;
+      permutation_v[i+n_g_groups] = column;
+    }
+  }
+}
+
+void CROSS_SECTION::Create_log_permutation(vector<ui_vector> &permutation_m,
+    ui_vector &permutation_v)
+{
+  for (unsigned int i=0; i<n_g_groups; i++)
+  {
+    if (i<n_e_groups)
+    {
+      permutation_m[i][2*i] = 1.0;
+      permutation_v[i] = 2*i;
+    }
+    else
+    {
+      permutation_m[i][2*n_e_groups+i] = 1.0;
+      permutation_v[i] = 2*n_e_groups+i;
+    }
+  }
+
+  for (unsigned int i=0; i<n_e_groups; i++)
+  {
+    if (i<n_g_groups)
+    {
+      permutation_m[i+n_g_groups][2*i+1] = 1.0;
+      permutation_v[i+n_g_groups] = 2*i+1;
+    }
+    else
+    {
+      permutation_m[i+n_g_groups][n_g_groups+i] = 1.0;
+      permutation_v[i+n_g_groups] = n_g_groups+i;
+    }
+  }
+}
+
+void CROSS_SECTIONS::Reordering(const unsigned int n_mat,const bool linear)
+{
+  bool identity(true);
+  ui_vector permutation_v(n_groups,0.);
+  vector<ui_vector> permutation_m(n_groups,d_vector (n_groups,0.));
+
+  if (linear==true)
+    Create_linear_permutation(permutation_m,permutated_v,identity);
+  else
+  {
+    Create_log_permutation(permutation_m,permutated_v);
+    identity = false;
+  }
+
+  if (!identity)
+  {
+    Matrix_multiplication(n_mat,permutation_m);
+    Vector_permutation(n_mat,permutation_v);
   }
 }

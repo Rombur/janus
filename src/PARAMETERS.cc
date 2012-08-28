@@ -193,9 +193,12 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
     fe_type = pwld;
 
   // Read the values of the source
-  src.resize(n_src);
+  unsigned int n_groups(0);
+  parameters_file>>n_groups;
+  src.resize(n_src,d_vector (n_groups));
   for (unsigned int i=0; i<n_src; ++i)
-    parameters_file>>src[i];
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>src[i][g];
   
   // Read the type of boundary condition on the bottom side
   parameters_file>>bottom_bc_type_str;

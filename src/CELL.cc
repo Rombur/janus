@@ -1,16 +1,17 @@
 #include "CELL.hh"
 
 CELL::CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
-        unsigned int last_dof,double source,d_vector sigma_t,vector<d_vector> sigma_s,
+        unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
+        vector<vector<vector<d_vector> > > sigma_s,
         vector<EDGE*> edges,FINITE_ELEMENT* fe) :
   id(cell_id),
   n_vertices(n_vertices),
   first_dof(first_dof),
   last_dof(last_dof),
   source(source),
+  cell_edges(edges),
   sigma_t(sigma_t),
   sigma_s(sigma_s),
-  cell_edges(edges),
   fe(fe)
 {
   unsigned int n_groups(sigma_t.size());
