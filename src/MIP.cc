@@ -126,9 +126,9 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
         Cg_solve(flux_moments,b);
         break;
       }
-    case cg_sgs :
+    case cg_ssor :
       {
-        Cg_sgs_solve(flux_moments,b);
+        Cg_ssor_solve(flux_moments,b);
         break;
       }
     case cg_ml :
@@ -560,7 +560,7 @@ void MIP::Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   Project_solution(flux_moments,x);
 }
 
-void MIP::Cg_sgs_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
+void MIP::Cg_ssor_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
 {
   Epetra_MultiVector x(*mip_map,1);
   Epetra_LinearProblem problem(A,&x,&b);
@@ -571,7 +571,8 @@ void MIP::Cg_sgs_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
     // Start init_prec_timer
     init_prec_timer->start();
     Teuchos::ParameterList sgs_list;
-    sgs_list.set("relaxation: type", "symmetric Gauss-Seidel");
+    sgs_list.set("relaxation: type","symmetric Gauss-Seidel");
+    sgs_list.set("relaxation: damping factor",parameters->Get_damping_factor());
     sgs_prec = new Ifpack_PointRelaxation(A);
     sgs_prec->SetParameters(sgs_list);
     sgs_prec->Initialize();

@@ -151,6 +151,9 @@ class CONVERT_INPUT(object) :
       if self.mip_solver=="cg_ml" :
         self.Search("AGGREGATION")
         self.aggregation = self.data[self.begin:self.end-1].lower()
+      elif self.mip_solver=="cg_ssor" :
+        self.Search("DAMPING FACTOR")
+        self.damping_factor = self.Read_next(1)
 
 # Read the quadrature type
     self.Search("QUADRATURE")
@@ -291,8 +294,9 @@ class CONVERT_INPUT(object) :
           output_file.write("Uncoupled_MIS\n")
         else :
           self.Abort("Unknown ML aggregation.")
-      elif self.mip_solver=="cg_sgs" :
-        output_file.write("CG_SGS\n")
+      elif self.mip_solver=="cg_ssor" :
+        output_file.write("CG_SSOR ")
+        output_file.write(str(self.damping_factor)+"\n")
       elif self.mip_solver=="cg_none" :
         output_file.write("CG_None\n")
       else :

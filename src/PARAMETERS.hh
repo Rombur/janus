@@ -23,10 +23,9 @@ enum BC_TYPE{vacuum,isotropic,most_normal,reflective};
 /// Linear Discontinuous).
 enum FE_TYPE{bld,pwld};
 
-/// Enum on the MIP solver type: cg_none (CG without preconditioning), cg_sgs
-/// (CG preconditioned with Symmetric-Gauss-Seidel), cg_ml (CG preconditioned
-/// with ML) and agmg (AGMG).
-enum MIP_SOLVER_TYPE{cg_none,cg_sgs,cg_ml,agmg};
+/// Enum on the MIP solver type: cg_none (CG without preconditioning), cg_ssor
+/// (CG preconditioned with SSOR), cg_ml (CG preconditioned with ML) and agmg (AGMG).
+enum MIP_SOLVER_TYPE{cg_none,cg_ssor,cg_ml,agmg};
 
 /// Enum on the quadrature type: glc (Gauss-Legendre-Chebyshev) or ls (Level
 /// Symmetric).
@@ -99,6 +98,9 @@ class PARAMETERS
 
     /// Return the sum of the weights (1, 2pi or 4pi)
     double Get_weight_sum() const;
+
+    /// Return the damping factor used by SSOR.
+    double Get_damping_factor() const;
 
     /// Return the type iof aggregation used by ML (uncoupled, mis or
     /// uncoupled-mis).
@@ -189,6 +191,8 @@ class PARAMETERS
     double inc_left;
     /// Sum of the weights (1, 2pi or 4pi)
     double weight_sum;
+    /// Damping factor used by SSOR.
+    double damping_factor;
     /// Type of aggregation used by ML: uncoupled, mis or uncoupld-mis.
     AGGREGATION_TYPE aggregation_type;
     /// Type of boundary condition on the bottom side.
@@ -304,6 +308,11 @@ inline double PARAMETERS::Get_src(unsigned int i) const
 inline double PARAMETERS::Get_weight_sum() const
 {
   return weight_sum;
+}
+
+inline double PARAMETERS::Get_damping_factor() const
+{
+  return damping_factor;
 }
 
 inline AGGREGATION_TYPE PARAMETERS::Get_aggregation_type() const

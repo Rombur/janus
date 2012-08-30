@@ -161,7 +161,7 @@ void TRANSPORT_SOLVER::Solve()
     MIP* mip(transport_operator.Get_mip());
     building_mip_time = mip->Get_building_mip_time();
     solve_mip_time = mip->Get_solve_mip_time();
-    if (parameters.Get_mip_solver_type()==cg_sgs ||
+    if (parameters.Get_mip_solver_type()==cg_ssor ||
         parameters.Get_mip_solver_type()==cg_ml)
       init_prec_mip_time = mip->Get_init_prec_mip_time();
     if (parameters.Get_mip_solver_type()==cg_ml)
@@ -212,7 +212,7 @@ void TRANSPORT_SOLVER::Solve()
         mip->Solve(*flux_moments);
         building_mip_time = mip->Get_building_mip_time();
         solve_mip_time = mip->Get_solve_mip_time();
-        if (parameters.Get_mip_solver_type()==cg_sgs ||
+        if (parameters.Get_mip_solver_type()==cg_ssor ||
             parameters.Get_mip_solver_type()==cg_ml)
           init_prec_mip_time = mip->Get_init_prec_mip_time();
         if (parameters.Get_mip_solver_type()==cg_ml)
@@ -275,7 +275,7 @@ void TRANSPORT_SOLVER::Solve()
       {
         building_mip_time = precond->Get_building_mip_time();
         solve_mip_time = precond->Get_solve_mip_time();
-        if (parameters.Get_mip_solver_type()==cg_sgs ||
+        if (parameters.Get_mip_solver_type()==cg_ssor ||
             parameters.Get_mip_solver_type()==cg_ml)
           init_prec_mip_time = precond->Get_init_prec_mip_time();
         delete precond;
@@ -289,7 +289,7 @@ void TRANSPORT_SOLVER::Solve()
   if (parameters.Get_mip()==true)
   {
     cout<<"Building MIP time: "<<building_mip_time<<endl;
-    if (parameters.Get_mip_solver_type()==cg_sgs || 
+    if (parameters.Get_mip_solver_type()==cg_ssor || 
         parameters.Get_mip_solver_type()==cg_ml)
       cout<<"Initializing CG preconditioner time: "<<init_prec_mip_time<<endl;
     cout<<"Solving MIP time: "<<solve_mip_time<<endl;

@@ -138,9 +138,13 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
       }
       else
       {
-        if (mip_solver_type_str.compare("CG_SGS")==0 || 
-            mip_solver_type_str.compare("cg_sgs")==0)
-          mip_solver_type = cg_sgs;
+        if (mip_solver_type_str.compare("CG_SSOR")==0 || 
+            mip_solver_type_str.compare("cg_ssor")==0)
+        {
+
+          mip_solver_type = cg_ssor;
+          parameters_file>>damping_factor;
+        }
         else
           mip_solver_type = cg_none;
       }

@@ -103,8 +103,8 @@ class MIP
     void Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
 
     /// Solve the system of equation using Conjuguate Gradient preconditioned
-    /// using Symmmetric-Gauss-Seidel.
-    void Cg_sgs_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
+    /// using SSOR.
+    void Cg_ssor_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
 
     /**
      * Solve the system of equation using Conjuguate Gradient preconditioned
