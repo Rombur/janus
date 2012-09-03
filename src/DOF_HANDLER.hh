@@ -96,8 +96,8 @@ class DOF_HANDLER
     /// Compute the most normal directions among the quadrature.
     void Compute_most_normal_direction(QUADRATURE* quad,unsigned int lvl);
 
-    /// Compute the external normal associated to each edge of each cell.
-    void Compute_external_normal();
+    /// Compute the exterior normal associated to each edge of each cell.
+    void Compute_exterior_normal();
 
     /// Number of significant angular fluxes per direction.
     unsigned int n_sf_per_dir;

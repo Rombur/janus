@@ -141,12 +141,12 @@ class MIP
     void Convert_lhs_to_fortran(int* &ia,int* &ja,double* &a,unsigned int n_dof,
         unsigned int nnz);
     
-    /// Convert the Epetra right-hand side to fortran data types.
-    void Convert_rhs_to_fortran(Epetra_MultiVector const &b,double* f,
+    /// Convert the Epetra MultiVector to a fortran data type.
+    void Convert_to_fortran(Epetra_MultiVector const &b,double* f,
         const unsigned int n_dof) const;
 
-    /// Convert the fortran rhs to Epetra rhs.
-    void Convert_rhs_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof)    
+    /// Convert the fortran data type to Epetra MultiVector.
+    void Convert_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof)    
       const;
 
     /// Level of the cross sections to use.

@@ -307,9 +307,9 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
         unsigned int index_cell(0);
         if ((*cell_edge)->Get_cell_index(0)!=cell->Get_id())
           index_cell = 1;
-        Teuchos::SerialDenseVector<int,double> const* const external_normal(
-            (*cell_edge)->Get_external_normal(index_cell));
-        const double n_dot_omega(omega.dot(*external_normal));
+        Teuchos::SerialDenseVector<int,double> const* const exterior_normal(
+            (*cell_edge)->Get_exterior_normal(index_cell));
+        const double n_dot_omega(omega.dot(*exterior_normal));
         if ((*cell_edge)->Is_interior()==false)
           if ((*cell_edge)->Get_bc_type()==reflective)
             reflective_b = true;
