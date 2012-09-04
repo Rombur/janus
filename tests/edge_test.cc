@@ -49,9 +49,9 @@ int main(int argc,char** argv)
   edge_1.Set_cell_index(0,1);
   edge_1.Set_cell_index(1,2);
 
-  edge_0.Set_external_normal(0,normal_0);
-  edge_1.Set_external_normal(0,normal_1);
-  edge_1.Set_external_normal(1,normal_2);
+  edge_0.Set_exterior_normal(0,normal_0);
+  edge_1.Set_exterior_normal(0,normal_1);
+  edge_1.Set_exterior_normal(1,normal_2);
 
   // Check interior edge
   assert(edge_0.Is_interior()==false);
@@ -97,13 +97,13 @@ int main(int argc,char** argv)
   assert(edge_1.Get_v1_x()==1.4);
   assert(edge_1.Get_v1_y()==1.6);
 
-  // Check the external normal component
-  assert(edge_0.Get_external_normal_component(0,0)==3.4);
-  assert(edge_0.Get_external_normal_component(0,1)==4.3);
-  assert(edge_1.Get_external_normal_component(0,0)==5.4);
-  assert(edge_1.Get_external_normal_component(0,1)==3.6);
-  assert(edge_1.Get_external_normal_component(1,0)==-5.4);
-  assert(edge_1.Get_external_normal_component(1,1)==-3.6);
+  // Check the exterior normal component
+  assert(edge_0.Get_exterior_normal_component(0,0)==3.4);
+  assert(edge_0.Get_exterior_normal_component(0,1)==4.3);
+  assert(edge_1.Get_exterior_normal_component(0,0)==5.4);
+  assert(edge_1.Get_exterior_normal_component(0,1)==3.6);
+  assert(edge_1.Get_exterior_normal_component(1,0)==-5.4);
+  assert(edge_1.Get_exterior_normal_component(1,1)==-3.6);
 
   return 0;
 }
