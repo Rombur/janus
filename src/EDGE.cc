@@ -9,7 +9,7 @@ EDGE::EDGE(EDGE_TYPE e_type,unsigned int edge_gid,d_vector v0,d_vector v1) :
   length = sqrt(pow(vertex_0[0]-vertex_1[0],2)+pow(vertex_0[1]-vertex_1[1],2));
   cell_indices.resize(2,0);
   lid.resize(2,0);
-  external_normal.resize(2,Teuchos::SerialDenseVector<int,double> (2));
+  exterior_normal.resize(2,Teuchos::SerialDenseVector<int,double> (2));
 }
 
 bool EDGE::Is_interior() const

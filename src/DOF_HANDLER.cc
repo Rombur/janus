@@ -86,7 +86,7 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS const &param,
     fe->Build_upwind_matrices(mesh[i],mesh);
   }
 
-  Compute_external_normal();
+  Compute_exterior_normal();
 }
 
 DOF_HANDLER::~DOF_HANDLER()
@@ -158,7 +158,7 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
             if ((*cell_edge)->Get_cell_index(index_2)!=
                 test_edge->Get_cell_index(index))
               index_2 = 1;
-            if (omega.dot(*((*cell_edge)->Get_external_normal(index_2)))>=0.)
+            if (omega.dot(*((*cell_edge)->Get_exterior_normal(index_2)))>=0.)
               outgoing_tests[pos] = true;
             else
               if (count(incoming_edges.begin(),incoming_edges.end(),
@@ -213,7 +213,7 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
       sweep_order[q].push_back(idir_sweep_order);
     }
     // Because of the symmetry of the quadratures only half of the sweep
-    // orders have to be computed. The others half is just the opposite of the
+    // orders have to be computed. The other half is just the opposite of the
     // first half.
     const unsigned int n_cells(triangulation->Get_n_cells());
     for (unsigned int idir=0; idir<half_n_dir; ++idir)
@@ -266,7 +266,7 @@ void DOF_HANDLER::Compute_most_normal_direction(QUADRATURE* quad,unsigned int lv
   }
 }
 
-void DOF_HANDLER::Compute_external_normal()
+void DOF_HANDLER::Compute_exterior_normal()
 {
   vector<EDGE>::iterator edge(triangulation->Get_edges_begin());
   vector<EDGE>::iterator edge_end(triangulation->Get_edges_end());
@@ -311,15 +311,15 @@ void DOF_HANDLER::Compute_external_normal()
     }
     if (n_edge.dot(edge_vector)>0.)
     {
-      edge->Set_external_normal(1,n_edge);
+      edge->Set_exterior_normal(1,n_edge);
       n_edge *= -1.;
-      edge->Set_external_normal(0,n_edge);
+      edge->Set_exterior_normal(0,n_edge);
     }
     else
     {
-      edge->Set_external_normal(0,n_edge);
+      edge->Set_exterior_normal(0,n_edge);
       n_edge *= -1.;
-      edge->Set_external_normal(1,n_edge);
+      edge->Set_exterior_normal(1,n_edge);
     }
   }
 }

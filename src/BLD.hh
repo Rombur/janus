@@ -11,7 +11,10 @@ using namespace std;
 typedef vector<double> d_vector;
 
 /**
- * This class build the BiLinear Discontinuous finite elements.
+ * This class build the BiLinear Discontinuous finite elements. This class
+ * should be used only with rectangular cells. If the mesh is built using the
+ * polygon option, it is important that the first point of the cell is the
+ * bottom left point.
  */
 
 class BLD : public FINITE_ELEMENT

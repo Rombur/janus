@@ -23,10 +23,13 @@ enum BC_TYPE{vacuum,isotropic,most_normal,reflective};
 /// Linear Discontinuous).
 enum FE_TYPE{bld,pwld};
 
-/// Enum on the MIP solver type: cg_none (CG without preconditioning), cg_sgs
-/// (CG preconditioned with Symmetric-Gauss-Seidel), cg_ml (CG preconditioned
-/// with ML) and agmg (AGMG).
-enum MIP_SOLVER_TYPE{cg_none,cg_sgs,cg_ml,agmg};
+/// Enum on the MIP solver type: cg_none (CG without preconditioning), cg_ssor
+/// (CG preconditioned with SSOR), cg_ml (CG preconditioned with ML), and agmg (AGMG).
+enum MIP_SOLVER_TYPE{cg_none,cg_ssor,cg_ml,agmg};
+
+/// Enum on the permutation type used with CEPXS cross sections: none, linear
+/// or logarithmic.
+enum PERMUTATION_TYPE{none,linear,logarithmic};
 
 /// Enum on the quadrature type: glc (Gauss-Legendre-Chebyshev) or ls (Level
 /// Symmetric).
@@ -115,6 +118,9 @@ class PARAMETERS
     /// Return the sum of the weights (1, 2pi or 4pi)
     double Get_weight_sum() const;
 
+    /// Return the damping factor used by SSOR.
+    double Get_damping_factor() const;
+
     /// Return the type iof aggregation used by ML (uncoupled, mis or
     /// uncoupled-mis).
     AGGREGATION_TYPE Get_aggregation_type() const;
@@ -138,16 +144,20 @@ class PARAMETERS
     /// Return the type of finite elements used (BLD or PWLD).
     FE_TYPE Get_fe_type() const;
 
+    /// Return the type of MIP solver used (CG without preconditioning, CG
+    /// with SGS preconditioning, CG with ML preconditioning or AGMG).
+    MIP_SOLVER_TYPE Get_mip_solver_type() const;
+
+    /// Return the type of permutation used when CEPXS cross sections are
+    /// used: none, linear or logarithmic.
+    PERMUTATION_TYPE Get_permutation_type() const;
+
     /// Return the type of quadrature used (GLC or LS). 
     QUAD_TYPE Get_quad_type() const;
 
     /// Return the type of solver used (SI, BiCGSTAB, GMRES or GMRES with
     /// estimation of the condition number).
     SOLVER_TYPE Get_solver_type() const;
-
-    /// Return the type of MIP solver used (CG without preconditioning, CG
-    /// with SGS preconditioning, CG with ML preconditioning or AGMG).
-    MIP_SOLVER_TYPE Get_mip_solver_type() const;
 
     /// Return the type of cross section file used (Fokker-Planck, regular,
     /// regular with energy deposition cross sections, CEPXS).
@@ -193,6 +203,8 @@ class PARAMETERS
     double inc_left;
     /// Sum of the weights (1, 2pi or 4pi)
     double weight_sum;
+    /// Damping factor used by SSOR.
+    double damping_factor;
     /// Type of aggregation used by ML: uncoupled, mis or uncoupld-mis.
     AGGREGATION_TYPE aggregation_type;
     /// Type of boundary condition on the bottom side.
@@ -210,6 +222,8 @@ class PARAMETERS
     /// Type of MIP solver type: CG without preconditioning, CG preconditioned with 
     /// Symmetric-Gauss-Seidel, CG preconditioned with ML and AGMG.
     MIP_SOLVER_TYPE mip_solver_type;
+    /// Type of permutation used when CEPXS cross sections are used.
+    PERMUTATION_TYPE permutation_type;
     /// Type of solver: SI, BiCGSTAB or GMRES.
     SOLVER_TYPE solver_type;
     /// Type of cross section file: Fokker-Planck, regular, regular with
@@ -317,6 +331,11 @@ inline double PARAMETERS::Get_weight_sum() const
   return weight_sum;
 }
 
+inline double PARAMETERS::Get_damping_factor() const
+{
+  return damping_factor;
+}
+
 inline AGGREGATION_TYPE PARAMETERS::Get_aggregation_type() const
 {
   return aggregation_type;
@@ -347,14 +366,19 @@ inline FE_TYPE PARAMETERS::Get_fe_type() const
   return fe_type;
 }
 
-inline QUAD_TYPE PARAMETERS::Get_quad_type() const
-{
-  return quad_type;
-}
-
 inline MIP_SOLVER_TYPE PARAMETERS::Get_mip_solver_type() const
 {
   return mip_solver_type;
+}
+
+inline PERMUTATION_TYPE PARAMETERS::Get_permutation_type() const
+{
+  return permutation_type;
+}
+
+inline QUAD_TYPE PARAMETERS::Get_quad_type() const
+{
+  return quad_type;
 }
 
 inline SOLVER_TYPE PARAMETERS::Get_solver_type() const

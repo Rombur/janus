@@ -177,9 +177,9 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
         Cg_solve(flux_moments,b);
         break;
       }
-    case cg_sgs :
+    case cg_ssor :
       {
-        Cg_sgs_solve(flux_moments,b);
+        Cg_ssor_solve(flux_moments,b);
         break;
       }
     case cg_ml :
@@ -267,14 +267,14 @@ void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
         {
           unsigned int edge_lid((*cell_edge)->Get_lid(0));
           const unsigned int n_dir(quad->Get_n_dir());
-          Teuchos::SerialDenseVector<int,double> const* const external_normal(
-              (*cell_edge)->Get_external_normal(0));
+          Teuchos::SerialDenseVector<int,double> const* const exterior_normal(
+              (*cell_edge)->Get_exterior_normal(0));
           Teuchos::SerialDenseMatrix<int,double> const* const downwind_matrix(
               fe->Get_downwind_matrix(edge_lid));
           for (unsigned int idir=0; idir<n_dir; ++idir)
           {
             Teuchos::SerialDenseVector<int,double> omega(quad->Get_omega_2d(idir));
-            const double n_dot_omega(omega.dot(*external_normal));
+            const double n_dot_omega(omega.dot(*exterior_normal));
             if (n_dot_omega>0.)
             {                                      
               const unsigned int offset(dof_handler->Get_n_dof()*n_mom+
@@ -344,8 +344,8 @@ void MIP::Build_lhs()
     {
       const unsigned int edge_lid_0(edge->Get_lid(0));
       const unsigned int edge_lid_1(edge->Get_lid(1));
-      const double normal_x(edge->Get_external_normal_component(0,0));
-      const double normal_y(edge->Get_external_normal_component(0,1));
+      const double normal_x(edge->Get_exterior_normal_component(0,0));
+      const double normal_y(edge->Get_exterior_normal_component(0,1));
       CELL* cell(dof_handler->Get_cell(edge->Get_cell_index(0)));
       CELL* next_cell(dof_handler->Get_cell(edge->Get_cell_index(1)));
       const unsigned int cell_first_dof(cell->Get_first_dof());
@@ -449,7 +449,7 @@ void MIP::Build_lhs()
         A->InsertGlobalValues(i+cell_first_dof,cell_dof,&values[0],&indices[0]);
       }
 
-      // External terms (+,+)
+      // Exterior terms (+,+)
       for (unsigned int i=0; i<next_cell_dof; ++i)
       {
         for (unsigned int j=0; j<next_cell_dof; ++j)
@@ -503,11 +503,11 @@ void MIP::Build_lhs()
         // n_x dot edge_deln_matrix_m_x
         Teuchos::SerialDenseMatrix<int,double> edge_deln_matrix_m_x(
             *(fe->Get_edge_deln_matrix(edge_lid_0,0)));
-        edge_deln_matrix_m_x *= edge->Get_external_normal_component(0,0);
+        edge_deln_matrix_m_x *= edge->Get_exterior_normal_component(0,0);
         // n_y dot edge_deln_matrix_m_y
         Teuchos::SerialDenseMatrix<int,double> edge_deln_matrix_m_y(
             *(fe->Get_edge_deln_matrix(edge_lid_0,1)));
-        edge_deln_matrix_m_y *= edge->Get_external_normal_component(0,1);
+        edge_deln_matrix_m_y *= edge->Get_exterior_normal_component(0,1);
         // n dot edge_deln_matrix_m
         Teuchos::SerialDenseMatrix<int,double> edge_deln_matrix_m(
             edge_deln_matrix_m_x);
@@ -607,7 +607,7 @@ void MIP::Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   Project_solution(flux_moments,x);
 }
 
-void MIP::Cg_sgs_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
+void MIP::Cg_ssor_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
 {
   Epetra_MultiVector x(*mip_map,1);
   Epetra_LinearProblem problem(A,&x,&b);
@@ -618,7 +618,8 @@ void MIP::Cg_sgs_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
     // Start init_prec_timer
     init_prec_timer->start();
     Teuchos::ParameterList sgs_list;
-    sgs_list.set("relaxation: type", "symmetric Gauss-Seidel");
+    sgs_list.set("relaxation: type","symmetric Gauss-Seidel");
+    sgs_list.set("relaxation: damping factor",parameters->Get_damping_factor());
     sgs_prec = new Ifpack_PointRelaxation(A);
     sgs_prec->SetParameters(sgs_list);
     sgs_prec->Initialize();
@@ -754,7 +755,7 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   f = new double [n];
   
   // Convert the right-hand side to fortran
-  Convert_rhs_to_fortran(b,f,n);
+  Convert_to_fortran(b,f,n);
 
   // If A has not been converted to fortran yet, we do it now
   if (a==NULL)
@@ -773,8 +774,8 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   // Stop solve_timer
   solve_timer->stop();
 
-  // Convert the righ-hand side to Epetra
-  Convert_rhs_to_epetra(epetra_x,x,n);
+  // Convert x to Epetra
+  Convert_to_epetra(epetra_x,x,n);
   
   // Project the solution
   Project_solution(flux_moments,epetra_x);
@@ -960,7 +961,7 @@ void MIP::Convert_lhs_to_fortran(int* &ia,int* &ja,double* &a,unsigned int n_dof
   A = NULL;
 }
 
-void MIP::Convert_rhs_to_fortran(Epetra_MultiVector const &b,double* f,
+void MIP::Convert_to_fortran(Epetra_MultiVector const &b,double* f,
     const unsigned int n_dof) const
 {
   // Copy b to f
@@ -968,7 +969,7 @@ void MIP::Convert_rhs_to_fortran(Epetra_MultiVector const &b,double* f,
     f[i] = b[0][i];
 }
 
-void MIP::Convert_rhs_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof) 
+void MIP::Convert_to_epetra(Epetra_MultiVector &b,double* f,unsigned int n_dof) 
   const
 {
   // Copy f to b

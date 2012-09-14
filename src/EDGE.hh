@@ -78,16 +78,16 @@ class EDGE
     /// Get a pointer to #vertex_1.
     d_vector const* const Get_v1() const;
 
-    /// Set the normal in the ith component of #external_normal.
-    void Set_external_normal(unsigned int i,
+    /// Set the normal in the ith component of #exterior_normal.
+    void Set_exterior_normal(unsigned int i,
         Teuchos::SerialDenseVector<int,double> const &normal);
 
-    /// Get the normal in the ith component of #external_normal.
-    Teuchos::SerialDenseVector<int,double> const* const Get_external_normal(
+    /// Get the normal in the ith component of #exterior_normal.
+    Teuchos::SerialDenseVector<int,double> const* const Get_exterior_normal(
         unsigned int i) const;
 
-    /// Get the jth component of the normal in the ith component of #external_normal.
-    double Get_external_normal_component(unsigned int i,unsigned int j) const;
+    /// Get the jth component of the normal in the ith component of #exterior_normal.
+    double Get_exterior_normal_component(unsigned int i,unsigned int j) const;
 
   private :
     /// Flag to know if the edge is inside the medium, on the bottom boundary, on the
@@ -109,7 +109,7 @@ class EDGE
     d_vector vertex_1;
     /// Contains the normals associated to the edge for the two cells
     /// associated to the edge.
-    vector<Teuchos::SerialDenseVector<int,double> > external_normal;
+    vector<Teuchos::SerialDenseVector<int,double> > exterior_normal;
 };
 
 inline EDGE_TYPE EDGE::Get_edge_type() const
@@ -187,20 +187,20 @@ inline d_vector const* const EDGE::Get_v1() const
   return &vertex_1;
 }
 
-inline void EDGE::Set_external_normal(unsigned int i,
+inline void EDGE::Set_exterior_normal(unsigned int i,
     Teuchos::SerialDenseVector<int,double> const &norm)
 {
-  external_normal[i] = norm;
+  exterior_normal[i] = norm;
 }
 
-inline Teuchos::SerialDenseVector<int,double> const* const EDGE::Get_external_normal(unsigned int i) const
+inline Teuchos::SerialDenseVector<int,double> const* const EDGE::Get_exterior_normal(unsigned int i) const
 {
-  return &external_normal[i];
+  return &exterior_normal[i];
 }
 
-inline double EDGE::Get_external_normal_component(unsigned int i,unsigned int j) const
+inline double EDGE::Get_exterior_normal_component(unsigned int i,unsigned int j) const
 {
-  return external_normal[i](j);
+  return exterior_normal[i](j);
 }
 
 #endif

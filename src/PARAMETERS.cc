@@ -92,7 +92,20 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
       if (xs_type_str.compare("regular_exs")==0)
         xs_type = regular_exs;
       else
+      {
         xs_type = cepxs;
+        string permutation_type_str;
+        parameters_file>>permutation_type_str;
+        if (permutation_type_str.compare("none")==0)
+          permutation_type = none;
+        else
+        {
+          if (permutation_type_str.compare("logarithmic")==0)
+            permutation_type = logarithmic;
+          else
+            permutation_type = linear;
+        }
+      }
     }
   }
   
@@ -157,9 +170,13 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
       }
       else
       {
-        if (mip_solver_type_str.compare("CG_SGS")==0 || 
-            mip_solver_type_str.compare("cg_sgs")==0)
-          mip_solver_type = cg_sgs;
+        if (mip_solver_type_str.compare("CG_SSOR")==0 || 
+            mip_solver_type_str.compare("cg_ssor")==0)
+        {
+
+          mip_solver_type = cg_ssor;
+          parameters_file>>damping_factor;
+        }
         else
           mip_solver_type = cg_none;
       }

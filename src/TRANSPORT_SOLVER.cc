@@ -54,7 +54,8 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
       }
     case cepxs :
       {         
-        cross_sections.Read_cepxs_cross_sections(triangulation.Get_n_materials());
+        cross_sections.Read_cepxs_cross_sections(triangulation.Get_n_materials(),
+            parameters.Get_permutation_type());
         break;
       }
     default :
@@ -63,7 +64,8 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
       }
   }
   cross_sections.Apply_ang_lvls_and_tc(parameters.Get_multigrid(),
-      parameters.Get_transport_correction(),parameters.Get_optimal_tc());
+      parameters.Get_transport_correction(),parameters.Get_optimal_tc(),
+      triangulation.Get_n_materials(),parameters.Get_sn_order());
   cout<<"Done reading the cross sections"<<endl;
 
   // Build the quadratures
@@ -261,7 +263,7 @@ void TRANSPORT_SOLVER::Solve()
     MIP* mip(transport_operator.Get_mip());
     building_mip_time = mip->Get_building_mip_time();
     solve_mip_time = mip->Get_solve_mip_time();
-    if (parameters.Get_mip_solver_type()==cg_sgs ||
+    if (parameters.Get_mip_solver_type()==cg_ssor ||
         parameters.Get_mip_solver_type()==cg_ml)
       init_prec_mip_time = mip->Get_init_prec_mip_time();
   }
@@ -369,7 +371,7 @@ void TRANSPORT_SOLVER::Solve()
         }
         building_mip_time = mip->Get_building_mip_time();
         solve_mip_time = mip->Get_solve_mip_time();
-        if (parameters.Get_mip_solver_type()==cg_sgs ||
+        if (parameters.Get_mip_solver_type()==cg_ssor ||
             parameters.Get_mip_solver_type()==cg_ml)
           init_prec_mip_time = mip->Get_init_prec_mip_time();
       }
@@ -478,7 +480,7 @@ void TRANSPORT_SOLVER::Solve()
       {
         building_mip_time = precond->Get_building_mip_time();
         solve_mip_time = precond->Get_solve_mip_time();
-        if (parameters.Get_mip_solver_type()==cg_sgs ||
+        if (parameters.Get_mip_solver_type()==cg_ssor ||
             parameters.Get_mip_solver_type()==cg_ml)
           init_prec_mip_time = precond->Get_init_prec_mip_time();
       }
@@ -490,7 +492,7 @@ void TRANSPORT_SOLVER::Solve()
   if (parameters.Get_mip()==true)
   {
     cout<<"Building MIP time: "<<building_mip_time<<endl;
-    if (parameters.Get_mip_solver_type()==cg_sgs || 
+    if (parameters.Get_mip_solver_type()==cg_ssor || 
         parameters.Get_mip_solver_type()==cg_ml)
       cout<<"Initializing CG preconditioner time: "<<init_prec_mip_time<<endl;
     cout<<"Solving MIP time: "<<solve_mip_time<<endl;

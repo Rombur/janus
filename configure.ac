@@ -6,7 +6,8 @@ AC_INIT([janus],[0.2])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AC_CONFIG_SRCDIR([src/janus.cc])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile])
+AC_CONFIG_TESTDIR([tests],[tests/testsuite.at])
 
 AC_ARG_WITH([gsl-include],
             [AS_HELP_STRING([--with-gsl-include],[location of the gsl headers])],
@@ -87,8 +88,8 @@ AC_SUBST([AGMG_LIBS])
 
 AS_IF([test "x$with_agmg" != xno],
       [AC_ARG_WITH([agmg-lib],[],
-            [AGMG_CXXFLAGS="-D AGMG"],
-            [AGMG_CXXFLAGS="-D AGMG"])],
+            [AGMG_CXXFLAGS="-DAGMG"],
+            [AGMG_CXXFLAGS="-DAGMG"])],
       [AC_ARG_WITH([agmg-lib],
             [AS_HELP_STRING([--agmg-path],[location of agmg])],
             [AGMG_CXXFLAGS=" "],
