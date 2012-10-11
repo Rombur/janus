@@ -1,6 +1,8 @@
 #include "TRIANGULATION.hh"
 
 TRIANGULATION::TRIANGULATION(string* geometry_inputfile) : 
+  n_x_cells(0),
+  n_y_cells(0),
   dim(2),
   bottom_value(1e100),
   right_value(-1e100),
@@ -32,16 +34,15 @@ void TRIANGULATION::Read_geometry()
 
   if (cell_type==rectangle)
   {
-    unsigned int n_x(0),n_y(0);
     // Read the number of cells in x and y
-    geometry_file>>n_x>>n_y;
-    n_cells = n_x*n_y;
+    geometry_file>>n_x_cells>>n_y_cells;
+    n_cells = n_x_cells*n_y_cells;
     mat_id.resize(n_cells);
     src_id.resize(n_cells);
     // Fill n_vertices with 4 since all the cells are rectangular
     n_vertices.resize(n_cells,4);
     // Read the abscissae
-    const unsigned int n_x_vertices(n_x+1);
+    const unsigned int n_x_vertices(n_x_cells+1);
     d_vector x(n_x_vertices,0.);
     for (unsigned int i=0; i<n_x_vertices; ++i)
     {
@@ -52,7 +53,7 @@ void TRIANGULATION::Read_geometry()
         right_value = x[i];
     }
     // Read the ordinates
-    const unsigned int n_y_vertices(n_y+1);
+    const unsigned int n_y_vertices(n_y_cells+1);
     d_vector y(n_y_vertices,0.);
     for (unsigned int i=0; i<n_y_vertices; ++i)
     {
@@ -74,7 +75,7 @@ void TRIANGULATION::Read_geometry()
     for (unsigned int i=0; i<n_cells; ++i) 
     {
       vector<d_vector> rectangle(4,d_vector(dim,0.));
-      if (i%n_x==0 && i!=0)
+      if (i%n_x_cells==0 && i!=0)
       {
         x_pos = 0;
         y_pos += 1;

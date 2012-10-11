@@ -106,125 +106,168 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
   most_n_top.resize(n_quad);
   most_n_left.resize(n_quad);
 
-  for (unsigned int q=0; q<n_quad; ++q)
+  if (triangulation->Get_cell_type()==rectangle)
   {
-    const unsigned int half_n_dir(quad[q]->Get_n_dir()/2);
-    for (unsigned int idir=0; idir<half_n_dir; ++idir)
+    const int n_x_cells(triangulation->Get_n_x_cells());
+    const int n_y_cells(triangulation->Get_n_y_cells());
+    for (unsigned int q=0; q<n_quad; ++q)
     {
-      // Sweep ordering for a direction
-      ui_vector (idir_sweep_order);
-      // Cells already in idir_sweep_order
-      ui_set cells_done;
-      // Edges ready to be put on idir_sweep_order
-      ui_list incoming_edges;
-      Teuchos::SerialDenseVector<int,double> omega(quad[q]->Get_omega_2d(idir));
-      // Look for the edges with a known incoming flux on the boundary
-      vector<EDGE>::iterator edge(triangulation->Get_edges_begin());
-      vector<EDGE>::iterator edge_end(triangulation->Get_edges_end());
-      for (; edge<edge_end; ++edge)
+      const unsigned int n_dir(quad[q]->Get_n_dir());
+      for (unsigned int idir=0; idir<n_dir; ++idir)
       {
-        if (((edge->Get_edge_type()==left_boundary) && (omega(0)>0.)) ||
-            ((edge->Get_edge_type()==right_boundary) && (omega(0)<0.)) ||
-            ((edge->Get_edge_type()==bottom_boundary) && (omega(1)>0.)) ||
-            ((edge->Get_edge_type()==top_boundary) && (omega(1)<0.)))
-          incoming_edges.push_back(edge->Get_gid());
-      }
-      while (incoming_edges.size()!=0)
-      {
-        unsigned int index(0);
-        EDGE* test_edge(triangulation->Get_edge(*(incoming_edges.begin())));
-        CELL* cell;
-        if (cells_done.count(test_edge->Get_cell_index(0))!=0)
+        // Sweep ordering for a direction
+        ui_vector idir_sweep_order;
+        // Pointer to omega for direction idir
+        Teuchos::SerialDenseVector<int,double> const* const omega=
+          quad[q]->Get_omega(idir);
+        if ((*omega)[0]>0)
         {
-          cell = mesh[test_edge->Get_cell_index(1)];
-          index = 1;
+          if ((*omega)[1]>0)
+          {
+            for (int y=0; y<n_y_cells; ++y)
+              for (int x=0; x<n_x_cells; ++x)
+                idir_sweep_order.push_back(x+y*n_x_cells);
+          }
+          else
+          {
+            for (int y=n_y_cells-1; y>-1; --y)
+              for (int x=0; x<n_x_cells; ++x)
+                idir_sweep_order.push_back(x+y*n_x_cells);
+          }
         }
         else
-          cell = mesh[test_edge->Get_cell_index(0)];
-        unsigned int pos(0);
-        const unsigned int length(cell->Get_n_edges()-1);
-        vector<bool> outgoing_tests(length,false);
-        vector<bool> incoming_tests(length,false);
-        ui_vector edges_map(length,0.);
-        vector<EDGE*>::iterator cell_edge(cell->Get_cell_edges_begin());
-        vector<EDGE*>::iterator cell_edge_end(cell->Get_cell_edges_end());
-        for (; cell_edge<cell_edge_end; ++cell_edge)
         {
-          if ((*cell_edge)->Get_gid()!=test_edge->Get_gid())
+          if ((*omega)[1]>0)
           {
-            // Check if the edge is outgoing
-            unsigned int index_2(0);
-            if ((*cell_edge)->Get_cell_index(index_2)!=
-                test_edge->Get_cell_index(index))
-              index_2 = 1;
-            if (omega.dot(*((*cell_edge)->Get_exterior_normal(index_2)))>=0.)
-              outgoing_tests[pos] = true;
-            else
-              if (count(incoming_edges.begin(),incoming_edges.end(),
-                    (*cell_edge)->Get_gid())==1)
-                incoming_tests[pos] = true;
-            edges_map[pos] = (*cell_edge)->Get_gid();
-            ++pos;
+            for (int y=0; y<n_y_cells; ++y)
+              for (int x=n_x_cells-1; x>0; --x)
+                idir_sweep_order.push_back(x+y*n_x_cells);
+          }
+          else
+          {
+            for (int y=n_y_cells-1; y>0; --y)
+              for (int x=n_x_cells-1; x>0; --x)
+                idir_sweep_order.push_back(x+y*n_x_cells);
           }
         }
-        // The cell is going to be accepted if all the edges are outgoing, all
-        // the edges but one are outgoing and the one which is not outgoing is
-        // ready to be incoming, all the edges but two are outgoing and the
-        // two which are not outgoing are ready to be incoming, etc.
-        bool test(true);
-        for (unsigned int i=0; i<length; ++i)
+        sweep_order[q].push_back(idir_sweep_order);
+      }
+    }
+  }
+  else
+  {
+    for (unsigned int q=0; q<n_quad; ++q)
+    {
+      const unsigned int n_dir(quad[q]->Get_n_dir());
+      for (unsigned int idir=0; idir<n_dir; ++idir)
+      {
+        // Sweep ordering for a direction
+        ui_vector idir_sweep_order;
+        // Cells already in idir_sweep_order
+        ui_set cells_done;
+        // Edges ready to be put on idir_sweep_order
+        ui_list incoming_edges;
+        Teuchos::SerialDenseVector<int,double> omega(quad[q]->Get_omega_2d(idir));
+        // Look for the edges with a known incoming flux on the boundary
+        vector<EDGE>::iterator edge(triangulation->Get_edges_begin());
+        vector<EDGE>::iterator edge_end(triangulation->Get_edges_end());
+        for (; edge<edge_end; ++edge)
         {
-          if ((outgoing_tests[i]==false) && (incoming_tests[i]==false))
-          {
-            test = false;
-            break;
-          }
+          if (((edge->Get_edge_type()==left_boundary) && (omega(0)>0.)) ||
+              ((edge->Get_edge_type()==right_boundary) && (omega(0)<0.)) ||
+              ((edge->Get_edge_type()==bottom_boundary) && (omega(1)>0.)) ||
+              ((edge->Get_edge_type()==top_boundary) && (omega(1)<0.)))
+            incoming_edges.push_back(edge->Get_gid());
         }
-        if (test==true)
+        while (incoming_edges.size()!=0)
         {
-          // The polygon is accepted
-          idir_sweep_order.push_back(cell->Get_id());
-          // Remove the edge from the list
-          incoming_edges.pop_front();
-          // If the other edges of the cell are outgoing, they become incoming
-          // except if they are on the on the boundary. If they are incoming,
-          // they are removed
+          unsigned int index(0);
+          EDGE* test_edge(triangulation->Get_edge(*(incoming_edges.begin())));
+          CELL* cell;
+          if (cells_done.count(test_edge->Get_cell_index(0))!=0)
+          {
+            cell = mesh[test_edge->Get_cell_index(1)];
+            index = 1;
+          }
+          else
+            cell = mesh[test_edge->Get_cell_index(0)];
+          unsigned int pos(0);
+          const unsigned int length(cell->Get_n_edges()-1);
+          vector<bool> outgoing_tests(length,false);
+          vector<bool> edge_parallel(length,false);
+          vector<bool> incoming_tests(length,false);
+          ui_vector edges_map(length,0.);
+          vector<EDGE*>::iterator cell_edge(cell->Get_cell_edges_begin());
+          vector<EDGE*>::iterator cell_edge_end(cell->Get_cell_edges_end());
+          for (; cell_edge<cell_edge_end; ++cell_edge)
+          {
+            if ((*cell_edge)->Get_gid()!=test_edge->Get_gid())
+            {
+              // Check if the edge is outgoing
+              unsigned int index_2(0);
+              if ((*cell_edge)->Get_cell_index(index_2)!=
+                  test_edge->Get_cell_index(index))
+                index_2 = 1;
+              if (omega.dot(*((*cell_edge)->Get_exterior_normal(index_2)))>=0.)
+              {
+                outgoing_tests[pos] = true;
+                if (omega.dot(*((*cell_edge)->Get_exterior_normal(index_2)))==0.)
+                  edge_parallel[pos] = true;
+              }
+              else
+                if (count(incoming_edges.begin(),incoming_edges.end(),
+                      (*cell_edge)->Get_gid())==1)
+                  incoming_tests[pos] = true;
+              edges_map[pos] = (*cell_edge)->Get_gid();
+              ++pos;
+            }
+          }
+          // The cell is going to be accepted if all the edges are outgoing, all
+          // the edges but one are outgoing and the one which is not outgoing is
+          // ready to be incoming, all the edges but two are outgoing and the
+          // two which are not outgoing are ready to be incoming, etc.
+          bool test(true);
           for (unsigned int i=0; i<length; ++i)
           {
-            if (outgoing_tests[i]==true)
+            if ((outgoing_tests[i]==false) && (incoming_tests[i]==false))
             {
-              if ((triangulation->Get_edge(edges_map[i]))->Is_interior()==true)
-                incoming_edges.push_back(edges_map[i]);
+              test = false;
+              break;
             }
-            else
-              incoming_edges.remove(edges_map[i]);
           }
-          cells_done.insert(cell->Get_id());
+          if (test==true)
+          {
+            // The polygon is accepted
+            idir_sweep_order.push_back(cell->Get_id());
+            // Remove the edge from the list
+            incoming_edges.pop_front();
+            // If the other edges of the cell are outgoing, they become incoming
+            // except if they are on the on the boundary. If they are incoming,
+            // they are removed
+            for (unsigned int i=0; i<length; ++i)
+            {
+              if (outgoing_tests[i]==true)
+              {
+                if (((triangulation->Get_edge(edges_map[i]))->Is_interior()==true) &&
+                    edge_parallel[i]==false)
+                  incoming_edges.push_back(edges_map[i]);
+              }
+              else
+                incoming_edges.remove(edges_map[i]);
+            }
+            cells_done.insert(cell->Get_id());
+          }
+          else
+          {
+            // The polygon is rejected. The edge is put at the end of the list.
+            unsigned int tmp(*(incoming_edges.begin()));
+            incoming_edges.pop_front();
+            incoming_edges.push_back(tmp);
+          }
         }
-        else
-        {
-          // The polygon is rejected. The edge is put at the end of the list.
-          unsigned int tmp(*(incoming_edges.begin()));
-          incoming_edges.pop_front();
-          incoming_edges.push_back(tmp);
-        }
+        sweep_order[q].push_back(idir_sweep_order);
       }
-      sweep_order[q].push_back(idir_sweep_order);
     }
-    // Because of the symmetry of the quadratures only half of the sweep
-    // orders have to be computed. The other half is just the opposite of the
-    // first half.
-    const unsigned int n_cells(triangulation->Get_n_cells());
-    for (unsigned int idir=0; idir<half_n_dir; ++idir)
-    {
-      ui_vector idir_sweep_order(n_cells);
-      for (unsigned int i=0; i<n_cells; ++i)
-        idir_sweep_order[n_cells-(i+1)] = sweep_order[q][idir][i];
-      sweep_order[q].push_back(idir_sweep_order);
-    }
-
-    // Compute the normal directions
-    Compute_most_normal_direction(quad[q],q);
   }
 }
 
