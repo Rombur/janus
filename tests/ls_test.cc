@@ -23,6 +23,23 @@ int main(int argc,char** argv)
   // Check the number of direction
   assert(n_dir==quad.Get_n_dir());
 
+  // Check the number of momemts
+  assert(n_dir==quad.Get_n_mom());
+
+  // Check the degree of expension
+  assert(quad.Get_l(0)==0);
+  assert(quad.Get_l(1)==1);
+  assert(quad.Get_l(2)==1);
+  assert(quad.Get_l(3)==2);
+  assert(quad.Get_l(4)==2);
+  assert(quad.Get_l(5)==2);
+  assert(quad.Get_l(6)==3);
+  assert(quad.Get_l(7)==3);
+  assert(quad.Get_l(8)==3);
+  assert(quad.Get_l(9)==3);
+  assert(quad.Get_l(10)==4);
+  assert(quad.Get_l(11)==4);
+
   // Check omega and omega_2d
   Teuchos::SerialDenseVector<int,double> const* const omega_ptr(quad.Get_omega(0));
   Teuchos::SerialDenseVector<int,double> omega_2d(quad.Get_omega_2d(0));

@@ -134,11 +134,11 @@ class CONVERT_INPUT(object) :
 # correction is used
     if self.transport_correction=="true" :
       self.Search("OPTIMAL TRANSPORT CORRECTION")
-      self.optimal_correction = self.data[self.begin:self.end-1]
+      self.optimal_correction = self.data[self.begin:self.end-1].lower()
 
 # Read if angular multigrid is used
     self.Search("ANGULAR MULTIGRID")
-    self.angular_multigrid = self.data[self.begin:self.end-1]
+    self.angular_multigrid = self.data[self.begin:self.end-1].lower()
 
 # Read if MIP is used
     self.Search("MIP")
@@ -161,7 +161,7 @@ class CONVERT_INPUT(object) :
 
 # Read if the quadrature is Galerkin
     self.Search("GALERKIN")
-    self.galerkin = self.data[self.begin:self.end-1]
+    self.galerkin = self.data[self.begin:self.end-1].lower()
 
 # Read L_max
     self.Search("L MAX")
@@ -170,6 +170,10 @@ class CONVERT_INPUT(object) :
 # Read Sn order
     self.Search("SN ORDER")
     self.sn_order = int(self.Read_next(1))
+
+    if self.galerking=="true" :
+      if self.sn_order!=self.L_max:
+        raise SystemError("SN ORDER and L MAX must be equal when a Galerkin quadrature is used.")
 
 # Read the finite elements type
     self.Search("FE")

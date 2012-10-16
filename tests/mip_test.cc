@@ -6,6 +6,7 @@
 #include "Epetra_Map.h"
 #include "Epetra_MpiComm.h"
 #include "Epetra_MultiVector.h"
+#include "CROSS_SECTIONS.hh"
 #include "DOF_HANDLER.hh"
 #include "GLC.hh"
 #include "MIP.hh"
@@ -21,9 +22,11 @@ int main(int argc,char** argv)
   Epetra_MpiComm comm(MPI_COMM_WORLD);
 
   const double four_pi(4.*M_PI);
+  string cross_sections_inp("cross_sections_mip.inp");
   string geometry_inp("geometry_mip.inp");
   string parameters_inp("parameters_mip.inp");
 
+  CROSS_SECTIONS cross_sections(&cross_sections_inp);
   TRIANGULATION triangulation(&geometry_inp);
   PARAMETERS parameters(&parameters_inp);
   vector<QUADRATURE*> quad(1,NULL);
@@ -31,14 +34,19 @@ int main(int argc,char** argv)
   triangulation.Read_geometry();
   triangulation.Build_edges();
 
-  parameters.Read_parameters(triangulation.Get_n_sources(),
-      triangulation.Get_n_materials());
+  parameters.Read_parameters(triangulation.Get_n_sources());
+
+  cross_sections.Read_regular_cross_sections(triangulation.Get_n_materials(),
+      parameters.Get_permutation_type(),false);
+  cross_sections.Apply_ang_lvls_and_tc(parameters.Get_multigrid(),
+      parameters.Get_transport_correction(),parameters.Get_optimal_tc(),
+      triangulation.Get_n_materials(),parameters.Get_sn_order());
   
-  quad[0] = new GLC(parameters.Get_sn_order(),parameters.Get_L_max(),
+  quad[0] = new GLC(parameters.Get_sn_order(),cross_sections.Get_L_max(),
       parameters.Get_galerkin());
   quad[0]->Build_quadrature(four_pi);
 
-  DOF_HANDLER dof_handler(&triangulation,parameters);
+  DOF_HANDLER dof_handler(&triangulation,parameters,cross_sections);
   dof_handler.Compute_sweep_ordering(quad);
 
   Epetra_Map map(dof_handler.Get_n_dof(),0,comm);

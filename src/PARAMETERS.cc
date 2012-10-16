@@ -1,16 +1,35 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janu is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "PARAMETERS.hh"
 
 PARAMETERS::PARAMETERS(string* parameters_inputfile) :
   parameters_filename(parameters_inputfile)
 {}
 
-void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_mat)
+void PARAMETERS::Read_parameters(const unsigned int n_src)
 {
   // Open the file to read it
   ifstream parameters_file(parameters_filename->c_str(),ios::in);
 
   // Check that the file was open properly
-  Check(parameters_file.good(),string ("Unable to open the file " + 
+  Check(parameters_file.good(),string ("unable to open the file "+
         *parameters_filename + " containing the parameters."));
 
   string weight_sum_str;
@@ -75,9 +94,6 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
     else
       weight_sum = 1.0;
   }
-
-  // Read the verbosity of the code
-  parameters_file>>verbose;
   
   // Read the type of cross section file
   parameters_file>>xs_type_str;
@@ -93,21 +109,25 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
         xs_type = regular_exs;
       else
       {
+        Check(xs_type_str.compare("cepxs")==0,string ("Unknown cross section type."));
         xs_type = cepxs;
-        string permutation_type_str;
-        parameters_file>>permutation_type_str;
-        if (permutation_type_str.compare("none")==0)
-          permutation_type = none;
-        else
-        {
-          if (permutation_type_str.compare("logarithmic")==0)
-            permutation_type = logarithmic;
-          else
-            permutation_type = linear;
-        }
       }
     }
+    string permutation_type_str;
+    parameters_file>>permutation_type_str;
+    if (permutation_type_str.compare("none")==0)
+      permutation_type = none;
+    else
+    {
+      if (permutation_type_str.compare("logarithmic")==0)
+        permutation_type = logarithmic;
+      else
+        permutation_type = linear;
+    }
   }
+
+  // Read the verbosity of the code
+  parameters_file>>verbose;
   
   // Read if transport correction is used
   parameters_file>>transport_correction_str;
@@ -189,7 +209,10 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
   if (quad_type_str.compare("LS")==0)
     quad_type = ls;
   else
+  {
+    Check(quad_type_str.compare("GLC")==0,string ("Unknown quadrature type."));
     quad_type = glc;
+  }
   
   // Read if the quadrature is a Galerkin quadrature
   parameters_file>>galerkin_str;
@@ -232,7 +255,7 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
       else
       {
         Check(bottom_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the bottom boundary.");
+            string ("Unknown boundary condition type on the bottom boundary."));
         bottom_bc_type = isotropic;
       }
       // Read bottom incoming flux
@@ -254,7 +277,7 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
       else
       {
         Check(right_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the right boundary.");
+            string ("Unknown boundary condition type on the right boundary."));
         right_bc_type = isotropic;
       }
       // Read right incoming flux
@@ -276,7 +299,7 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
       else
       {
         Check(top_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the top boundary.");
+            string ("Unknown boundary condition type on the top boundary."));
         top_bc_type = isotropic;
       }
       // Read right incoming flux
@@ -298,7 +321,7 @@ void PARAMETERS::Read_parameters(const unsigned int n_src,const unsigned int n_m
       else
       {
         Check(left_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the left boundary.");
+            string ("Unknown boundary condition type on the left boundary."));
           left_bc_type = isotropic;
       }
       // Read right incoming flux

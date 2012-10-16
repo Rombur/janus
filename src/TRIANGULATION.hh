@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janu is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef _TRIANGULATION_HH_
 #define _TRIANGULATION_HH_
 
@@ -35,6 +54,12 @@ class TRIANGULATION
     /// Get the number of cells.
     unsigned int Get_n_cells() const;
 
+    /// Get the number of cells along x when the rectangular cells are used.
+    unsigned int Get_n_x_cells() const;
+
+    /// Get the number of cells along y when the rectangular cells are used.
+    unsigned int Get_n_y_cells() const;
+
     /// Get the number of vertices for a cell i.
     unsigned int Get_n_vertices(unsigned int i) const;
 
@@ -49,6 +74,9 @@ class TRIANGULATION
 
     /// Get the number of sources.
     unsigned int Get_n_sources() const;
+
+    /// Get the type of the cells: rectangle or polygon.
+    CELL_TYPE Get_cell_type() const;
 
     /// Get the abscissa of vertex j of the cell i.
     double Get_x_coord(unsigned int i,unsigned int j) const;
@@ -74,6 +102,10 @@ class TRIANGULATION
 
     /// Number of cells.
     unsigned int n_cells;
+    /// Number of cells along x when rectangular cells are used.
+    unsigned int n_x_cells;
+    /// Number of cells along y when rectangular cells are used.
+    unsigned int n_y_cells;
     /// Dimension of the problem. For now, only 2D problems are allowed.
     const unsigned int dim;
     /// Type of the cells: rectangle or polygon.
@@ -109,6 +141,16 @@ inline unsigned int TRIANGULATION::Get_n_cells() const
   return n_cells;
 }
 
+inline unsigned int TRIANGULATION::Get_n_x_cells() const
+{
+  return n_x_cells;
+}
+
+inline unsigned int TRIANGULATION::Get_n_y_cells() const
+{
+  return n_y_cells;
+}
+
 inline unsigned int TRIANGULATION::Get_n_vertices(unsigned int i) const
 {
   return n_vertices[i];
@@ -122,6 +164,11 @@ inline unsigned int TRIANGULATION::Get_mat_id(unsigned int i) const
 inline unsigned int TRIANGULATION::Get_src_id(unsigned int i) const
 {
   return src_id[i];
+}
+
+inline CELL_TYPE TRIANGULATION::Get_cell_type() const
+{
+  return cell_type;
 }
 
 inline double TRIANGULATION::Get_x_coord(unsigned int i,unsigned int j) const

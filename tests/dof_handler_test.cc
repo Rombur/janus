@@ -2,7 +2,7 @@
 #include <string>
 #include "gsl_math.h"
 #include "CELL.hh"
-#include "CRO
+#include "CROSS_SECTIONS.hh"
 #include "DOF_HANDLER.hh"
 #include "EDGE.hh"
 #include "GLC.hh"
@@ -17,9 +17,11 @@ typedef vector<unsigned int> ui_vector;
 int main(int argc,char** argv)
 {
   const double four_pi(4.*M_PI);
+  string cross_sections_inp("cross_sections_dof.inp");
   string geometry_inp("geometry_dof.inp");
   string parameters_inp("parameters_dof.inp");
 
+  CROSS_SECTIONS cross_sections(&cross_sections_inp);
   TRIANGULATION triangulation(&geometry_inp);
   PARAMETERS parameters(&parameters_inp);
   vector<QUADRATURE*> quad(2,NULL);
@@ -27,18 +29,23 @@ int main(int argc,char** argv)
   triangulation.Read_geometry();
   triangulation.Build_edges();
 
-  parameters.Read_parameters(triangulation.Get_n_sources(),
-      triangulation.Get_n_materials());
+  parameters.Read_parameters(triangulation.Get_n_sources());
+
+  cross_sections.Read_regular_cross_sections(triangulation.Get_n_materials(),
+      parameters.Get_permutation_type(),false);
+  cross_sections.Apply_ang_lvls_and_tc(parameters.Get_multigrid(),
+      parameters.Get_transport_correction(),parameters.Get_optimal_tc(),
+      triangulation.Get_n_materials(),parameters.Get_sn_order());
   
-  quad[0] = new GLC(parameters.Get_sn_order(),parameters.Get_L_max(),
+  quad[0] = new GLC(parameters.Get_sn_order(),cross_sections.Get_L_max(),
       parameters.Get_galerkin());
   quad[0]->Build_quadrature(four_pi);
   
-  quad[1] = new GLC(parameters.Get_sn_order()/2.,parameters.Get_L_max()/2.,
+  quad[1] = new GLC(parameters.Get_sn_order()/2.,cross_sections.Get_L_max()/2.,
       parameters.Get_galerkin());
   quad[1]->Build_quadrature(four_pi);
 
-  DOF_HANDLER dof_handler(&triangulation,parameters);
+  DOF_HANDLER dof_handler(&triangulation,parameters,cross_sections);
   dof_handler.Compute_sweep_ordering(quad);
  
   // Check the most normal direction for the bottom
@@ -174,29 +181,29 @@ int main(int argc,char** argv)
   assert((*sweep_ordering)[4]==1);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,6);
-  assert((*sweep_ordering)[0]==3);
-  assert((*sweep_ordering)[1]==1);
+  assert((*sweep_ordering)[0]==1);
+  assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==2);
   assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,7);
-  assert((*sweep_ordering)[0]==3);
-  assert((*sweep_ordering)[1]==2);
+  assert((*sweep_ordering)[0]==2);
+  assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==1);
   assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,8);
-  assert((*sweep_ordering)[0]==3);
-  assert((*sweep_ordering)[1]==1);
+  assert((*sweep_ordering)[0]==1);
+  assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==2);
   assert((*sweep_ordering)[4]==0);
 
   sweep_ordering = dof_handler.Get_sweep_order(1,2);
-  assert((*sweep_ordering)[0]==3);
-  assert((*sweep_ordering)[1]==1);
+  assert((*sweep_ordering)[0]==1);
+  assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==2);
   assert((*sweep_ordering)[4]==0);
@@ -205,12 +212,12 @@ int main(int argc,char** argv)
   assert((*sweep_ordering)[0]==1);
   assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
-  assert((*sweep_ordering)[3]==2);
-  assert((*sweep_ordering)[4]==0);
+  assert((*sweep_ordering)[3]==0);
+  assert((*sweep_ordering)[4]==2);
 
   sweep_ordering = dof_handler.Get_sweep_order(0,10);
-  assert((*sweep_ordering)[0]==1);
-  assert((*sweep_ordering)[1]==0);
+  assert((*sweep_ordering)[0]==0);
+  assert((*sweep_ordering)[1]==1);
   assert((*sweep_ordering)[2]==4);
   assert((*sweep_ordering)[3]==3);
   assert((*sweep_ordering)[4]==2);
@@ -219,15 +226,15 @@ int main(int argc,char** argv)
   assert((*sweep_ordering)[0]==1);
   assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
-  assert((*sweep_ordering)[3]==2);
-  assert((*sweep_ordering)[4]==0);
+  assert((*sweep_ordering)[3]==0);
+  assert((*sweep_ordering)[4]==2);
 
   sweep_ordering = dof_handler.Get_sweep_order(1,3);
   assert((*sweep_ordering)[0]==1);
   assert((*sweep_ordering)[1]==3);
   assert((*sweep_ordering)[2]==4);
-  assert((*sweep_ordering)[3]==2);
-  assert((*sweep_ordering)[4]==0);
+  assert((*sweep_ordering)[3]==0);
+  assert((*sweep_ordering)[4]==2);
 
   // Check the cell iterator
   vector<CELL*>::iterator cell(dof_handler.Get_mesh_begin());

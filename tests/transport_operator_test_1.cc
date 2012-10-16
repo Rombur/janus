@@ -24,8 +24,8 @@ typedef vector<double> d_vector;
 int main(int argc,char** argv)
 {
   unsigned int n_sources(1);
-  unsigned int n_materials(1);
   unsigned int flux_moments_size(0);
+  string cross_sections_inp("cross_sections_transport_1.inp");
   string geometry_inp("geometry_transport_1.inp");
   string parameters_inp("parameters_transport_1.inp");
 
@@ -71,6 +71,7 @@ int main(int argc,char** argv)
   solution[34] = 0.974449442413;
   solution[35] = 0.97444944209;
 
+  CROSS_SECTIONS cross_sections(&cross_sections_inp);
   TRIANGULATION triangulation(&geometry_inp);
   PARAMETERS parameters(&parameters_inp);
   vector<QUADRATURE*> quad(1,NULL);
@@ -80,14 +81,21 @@ int main(int argc,char** argv)
   triangulation.Build_edges();
 
   // Create the parameters
-  parameters.Read_parameters(n_sources,n_materials);
+  parameters.Read_parameters(n_sources);
+
+  // Create the cross sections
+  cross_sections.Read_regular_cross_sections(triangulation.Get_n_materials(),
+      parameters.Get_permutation_type(),false);
+  cross_sections.Apply_ang_lvls_and_tc(parameters.Get_multigrid(),
+      parameters.Get_transport_correction(),parameters.Get_optimal_tc(),
+      triangulation.Get_n_materials(),parameters.Get_sn_order());
 
   // Build the quadrature
-  quad[0] = new LS(parameters.Get_sn_order(),parameters.Get_L_max(),false);
+  quad[0] = new LS(parameters.Get_sn_order(),cross_sections.Get_L_max(),false);
   quad[0]->Build_quadrature(1.0);
 
   // Build the dof handler
-  DOF_HANDLER dof_handler(&triangulation,parameters);
+  DOF_HANDLER dof_handler(&triangulation,parameters,cross_sections);
   dof_handler.Compute_sweep_ordering(quad);
 
   // Flux moments map and vector
@@ -98,7 +106,7 @@ int main(int argc,char** argv)
 
   // Solve the transport
   TRANSPORT_OPERATOR transport_operator(&dof_handler,&parameters,quad[0],&comm,
-      &flux_moments_map);
+      &flux_moments_map,cross_sections.Get_n_groups());
 
   // Compute right-hand side for BiCGSTAB
   Epetra_MultiVector rhs(flux_moments);
@@ -114,7 +122,7 @@ int main(int argc,char** argv)
   solver.SetAztecOption(AZ_conv,AZ_rhs);
 
   // Solve the transport equation
-  solver.Iterate(parameters.Get_max_it(),parameters.Get_tolerance());
+  solver.Iterate(parameters.Get_max_inner_it(),parameters.Get_inner_tolerance());
 
   // Apply the preconditioner to get the solution
   MIP* precond(transport_operator.Get_mip());

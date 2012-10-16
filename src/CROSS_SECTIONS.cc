@@ -1,9 +1,32 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janu is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "CROSS_SECTIONS.hh"
 
 CROSS_SECTIONS::CROSS_SECTIONS(string* cross_section_inputfile) :
+  L_max(0),
   n_g_groups(0),
   n_e_groups(0),
   n_p_groups(0),
+  n_groups(0),
+  n_supergroups(0),
+  n_levels(0),
   cross_section_filename(cross_section_inputfile) 
 {}
 
@@ -69,41 +92,12 @@ void CROSS_SECTIONS::Read_cepxs_cross_sections(const unsigned int n_mat,
   // Close the file
   cross_section_file.close();
 
-  bool identity(true);
-  ui_vector permutation_v(n_groups,0.);
-  vector<d_vector> permutation_m(n_groups,d_vector (n_groups,0.));
-
-  switch (permutation_type)
-  {
-    case (linear) :
-      {
-        Create_linear_permutation(permutation_m,permutation_v,identity);
-        break;
-      }
-    case (logarithmic) :
-      {
-        Create_log_permutation(permutation_m,permutation_v);
-        identity = false;
-        break;
-      }
-    case (none) :
-      {
-        break;
-      }
-    default :
-      {
-        Check(false,"Unknown permutation type.");
-      }
-  }
-  if (!identity)
-  {
-    Matrix_multiplication(n_mat,permutation_m);
-    Vector_permutation(n_mat,permutation_v);
-  }
+  // Apply the permutation on the cross sections
+  Apply_cross_section_permutation(permutation_type,n_mat);
 }
 
 void CROSS_SECTIONS::Read_regular_cross_sections(const unsigned int n_mat,
-    bool energy_deposition)
+    const PERMUTATION_TYPE permutation_type, const bool energy_deposition)
 {
   // Open the file to read it
   ifstream cross_section_file(cross_section_filename->c_str(),ios::in);
@@ -139,14 +133,17 @@ void CROSS_SECTIONS::Read_regular_cross_sections(const unsigned int n_mat,
     }
 
     // Store the sigma_s
-    for (unsigned int mom=0; mom<L_max+1; ++mom)
-      for (unsigned int g=0; g<n_groups; ++g)
-        for (unsigned int gp=0; gp<n_groups; ++gp)
+    for (unsigned int g=0; g<n_groups; ++g)
+      for (unsigned int gp=0; gp<n_groups; ++gp)
+        for (unsigned int mom=0; mom<L_max+1; ++mom)
           cross_section_file>>sigma_s[i][g][gp][mom];
   }
 
   // Close the file
   cross_section_file.close();
+
+  // Apply the permutation on the cross sections
+  Apply_cross_section_permutation(permutation_type,n_mat);
 }
 
 void CROSS_SECTIONS::Build_fokker_planck_xs(const unsigned int n_mat)
@@ -158,9 +155,17 @@ void CROSS_SECTIONS::Build_fokker_planck_xs(const unsigned int n_mat)
   Check(cross_section_file.good(),string("Unable to open the file ") +
         string(*cross_section_filename) + string(" containing the cross sections."));
   
-  // Read the number of materials
+  // Read the number of materials and L_max
   unsigned int n_materials(0);
-  cross_section_file>>n_materials;
+  cross_section_file>>n_materials>>L_max;
+
+  // When Fokker-Planck cross sections are used, only one group is allowed
+  n_groups = 1;
+  n_supergroups = 1;
+
+  // Check that n_mat is the same that n_materials
+  Check(n_mat==n_materials,string("The number of materials in the geometry file ")
+      +string(" and in the cross sections are different."));
 
   d_vector alpha(n_mat,0.);
   sigma_t.resize(n_mat,d_vector (1,0.));
@@ -181,11 +186,8 @@ void CROSS_SECTIONS::Build_fokker_planck_xs(const unsigned int n_mat)
 
   // Build the Fokker-Planck cross sections 
   for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
-  {
-    unsigned int index(0);
     for (unsigned int l=0; l<L_max+1; ++l)
-        sigma_s[i_mat][0][0][index] = alpha[i_mat]/2.*(L_max*(L_max+1)-l*(l+1));
-  }
+      sigma_s[i_mat][0][0][l] = alpha[i_mat]/2.*(L_max*(L_max+1)-l*(l+1));
 }
 
 void CROSS_SECTIONS::Apply_ang_lvls_and_tc(const bool ang_lvls,const bool tc,
@@ -197,11 +199,25 @@ void CROSS_SECTIONS::Apply_ang_lvls_and_tc(const bool ang_lvls,const bool tc,
     Apply_angular_levels(n_mat,sn);
   }
   else
+  {
     n_levels = 1;
+    sigma_t_lvl.resize(n_mat,vector<d_vector> (n_groups,d_vector(n_levels,0.)));
+    sigma_s_lvl.resize(n_mat,vector<vector<vector<d_vector> > >(n_groups,
+           vector<vector<d_vector> > (n_groups,vector<d_vector>(n_levels,
+               d_vector(L_max+1,0.)))));
+    for (unsigned int material_id=0; material_id<n_mat; ++material_id)
+      for (unsigned int g=0; g<n_groups; ++g)
+        sigma_t_lvl[material_id][g][0] = sigma_t[material_id][g];
+    for (unsigned int material_id=0; material_id<n_mat; ++material_id)
+      for (unsigned int g=0; g<n_groups; ++g)
+        for (unsigned int gp=0; gp<n_groups; ++gp)
+          for (unsigned int l=0; l<=L_max; ++l)
+            sigma_s_lvl[material_id][g][gp][0][l] = sigma_s[material_id][g][gp][l];
+  }
   
   if (tc==true)
   {
-    // e "standard" extended correction is used, the last sigma_s,l is
+    // "standard" extended correction is used, the last sigma_s,l is
     // used as correction and L_max is decreased by one.
     if (optimal==false)
       --L_max;
@@ -214,20 +230,15 @@ void CROSS_SECTIONS::Apply_ang_lvls_and_tc(const bool ang_lvls,const bool tc,
         double L(L_max); 
         for (unsigned int lvl=0; lvl<n_levels; ++lvl)
         {
-          L = ceil(L/2.);
+          double L2(ceil(L/2.));
           if (optimal==true)
           {
             if (L==0.)
               correction = 0.;
             else
             {
-              if (L==1.)
-                L = 0.;
-              unsigned int pos(0);
-              for (unsigned int jj=0; jj<=L; ++jj)
-                pos += jj+1;
-              correction = (sigma_s_lvl[i_mat][g][g][lvl][pos]+
-                  sigma_s_lvl[i_mat][g][g][lvl].back())/2.;
+              correction = (sigma_s_lvl[i_mat][g][g][lvl][L]+
+                  sigma_s_lvl[i_mat][g][g][lvl][L2+1])/2.;
             }
           }
           else
@@ -235,9 +246,10 @@ void CROSS_SECTIONS::Apply_ang_lvls_and_tc(const bool ang_lvls,const bool tc,
             if (lvl==0)
               correction = sigma_s[i_mat][g][g][L_max+1];
             else
-              correction = sigma_s_lvl[i_mat][g][g][lvl-1][L]; 
+              correction = sigma_s[i_mat][g][g][L+1]; 
           }
-          Apply_transport_correction(i_mat,g,lvl,L,correction);
+          Apply_transport_correction(i_mat,g,lvl,correction);
+          L = L2;
         }
       }
     }
@@ -269,16 +281,49 @@ void CROSS_SECTIONS::Apply_angular_levels(const unsigned int n_mat,
 }
 
 void CROSS_SECTIONS::Apply_transport_correction(const unsigned int i_mat,
-    const unsigned int g,const unsigned int lvl,const double L,
-    const double correction)
+    const unsigned int g,const unsigned int lvl,const double correction)
 {
   sigma_t_lvl[i_mat][g][lvl] -= correction;
-  for (unsigned int gp=0; gp<n_groups; ++gp)
+  d_vector::iterator sigma_s(sigma_s_lvl[i_mat][g][g][lvl].begin());
+  d_vector::iterator sigma_s_end(sigma_s_lvl[i_mat][g][g][lvl].end());
+  for (; sigma_s<sigma_s_end; ++sigma_s)
+    *sigma_s -= correction;
+}
+
+void CROSS_SECTIONS::Apply_cross_section_permutation(
+    const PERMUTATION_TYPE permutation_type,const unsigned int n_mat)
+{
+  bool identity(true);
+  ui_vector permutation_v(n_groups,0.);
+  vector<d_vector> permutation_m(n_groups,d_vector (n_groups,0.));
+
+  switch (permutation_type)
   {
-    d_vector::iterator sigma_s(sigma_s_lvl[i_mat][g][gp][lvl].begin());
-    d_vector::iterator sigma_s_end(sigma_s_lvl[i_mat][g][gp][lvl].end());
-    for (; sigma_s<sigma_s_end; ++sigma_s)
-      *sigma_s -= correction;
+    case (linear) :
+      {
+        Create_linear_permutation(permutation_m,permutation_v,identity);
+        break;
+      }
+    case (logarithmic) :
+      {
+        Create_log_permutation(permutation_m,permutation_v);
+        identity = false;
+        break;
+      }
+    case (none) :
+      {
+        n_supergroups = n_groups;
+        break;
+      }
+    default :
+      {
+        Check(false,"Unknown permutation type.");
+      }
+  }
+  if (!identity)
+  {
+    Matrix_multiplication(n_mat,permutation_m);
+    Vector_permutation(n_mat,permutation_v);
   }
 }
 

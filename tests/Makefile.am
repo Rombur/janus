@@ -1,8 +1,11 @@
 code_dir = $(abs_top_srcdir)/src
 VPATH = $(code_dir)
-OBJECTS = cell_test dof_handler_test edge_test glc_test ls_test mip_test\
-					parameters_test_1 parameters_test_2 pwld_test transport_operator_test_1\
-					transport_operator_test_2 triangulation_rec_test triangulation_pol_test
+OBJECTS = cell_test cross_sections_fp_test_1 cross_sections_fp_test_2\
+				 	cross_sections_regular_test_1 cross_sections_regular_test_2\
+				 	cross_sections_cepxs_test dof_handler_test edge_test glc_test\
+					ls_test mip_test parameters_test_1 parameters_test_2 pwld_test\
+				 	transport_operator_test_1	transport_operator_test_2\
+					triangulation_rec_test triangulation_pol_test
 
 CXXFLAGS = -Wall $(AGMG_CXXFLAGS) $(GSL_CXXFLAGS) $(TRILINOS_CXXFLAGS) $(LAPACK_CXXFLAGS) $(BLAS_CXXFLAGS) $(MPI_CXXFLAGS)
 LIBFLAGS = $(AGMG_LIBS) $(GSL_LIBS) $(TRILINOS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(MPI_LIBS)
@@ -13,8 +16,41 @@ cell_test : cell_test.o BLD.o CELL.o EDGE.o EXCEPTION.o
 cell_test.o : cell_test.cc
 	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $< 
 
+cross_sections_fp_test_1 : cross_sections_fp_test_1.o CROSS_SECTIONS.o EXCEPTION.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
+
+cross_sections_fp_test_1.o : cross_sections_fp_test_1.cc
+	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $< 
+
+cross_sections_fp_test_2 : cross_sections_fp_test_2.o CROSS_SECTIONS.o EXCEPTION.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
+
+cross_sections_fp_test_2.o : cross_sections_fp_test_2.cc
+	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $< 
+
+cross_sections_regular_test_1 : cross_sections_regular_test_1.o CROSS_SECTIONS.o\
+ 	EXCEPTION.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
+
+cross_sections_regular_test_1.o : cross_sections_regular_test_1.cc
+	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $< 
+
+cross_sections_regular_test_2 : cross_sections_regular_test_2.o CROSS_SECTIONS.o\
+ 	EXCEPTION.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
+
+cross_sections_regular_test_2.o : cross_sections_regular_test_2.cc
+	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $< 
+
+cross_sections_cepxs_test : cross_sections_cepxs_test.o CROSS_SECTIONS.o\
+ 	EXCEPTION.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
+
+cross_sections_cepxs_test.o : cross_sections_cepxs_test.cc
+	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $< 
+
 dof_handler_test : dof_handler_test.o CELL.o DOF_HANDLER.o EDGE.o PARAMETERS.o\
-	QUADRATURE.o TRIANGULATION.o GLC.o BLD.o PWLD.o EXCEPTION.o
+	QUADRATURE.o TRIANGULATION.o GLC.o BLD.o PWLD.o EXCEPTION.o CROSS_SECTIONS.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
 
 dof_handler_test.o : dof_handler_test.cc
@@ -39,7 +75,7 @@ ls_test.o : ls_test.cc
 	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $<
 
 mip_test : mip_test.o DOF_HANDLER.o GLC.o MIP.o PARAMETERS.o QUADRATURE.o\
-	TRIANGULATION.o MIP.o BLD.o EDGE.o PWLD.o CELL.o EXCEPTION.o
+	TRIANGULATION.o MIP.o BLD.o EDGE.o PWLD.o CELL.o EXCEPTION.o CROSS_SECTIONS.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
 
 mip_test.o : mip_test.cc
@@ -77,7 +113,7 @@ triangulation_rec_test.o : triangulation_rec_test.cc
 
 transport_operator_test_1 : transport_operator_test_1.o CELL.o EDGE.o LS.o MIP.o\
 	PARAMETERS.o QUADRATURE.o TRANSPORT_OPERATOR.o TRIANGULATION.o DOF_HANDLER.o BLD.o\
-	PWLD.o EXCEPTION.o
+	PWLD.o EXCEPTION.o CROSS_SECTIONS.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
 
 transport_operator_test_1.o : transport_operator_test_1.cc
@@ -85,7 +121,7 @@ transport_operator_test_1.o : transport_operator_test_1.cc
 
 transport_operator_test_2 : transport_operator_test_2.o CELL.o EDGE.o LS.o MIP.o\
 	PARAMETERS.o QUADRATURE.o TRANSPORT_OPERATOR.o TRIANGULATION.o DOF_HANDLER.o BLD.o\
-	PWLD.o EXCEPTION.o
+	PWLD.o EXCEPTION.o CROSS_SECTIONS.o GLC.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
 
 transport_operator_test_2.o : transport_operator_test_2.cc
@@ -105,6 +141,14 @@ clean-local:
 	test ! -f '$(TESTSUITE)' || $(SHELL) '$(TESTSUITE)' --clean
 	-rm testsuite
 	-rm *.o
+	-rm cell_test
+	-rm cross_sections_fp_test_1
+	-rm cross_sections_fp_test_2
+	-rm cross_sections_regular_test_1
+	-rm cross_sections_regular_test_2
+	-rm cross_sections_cepxs_test
+	-rm dof_handler_test
+	-rm edge_test
 	-rm glc_test
 	-rm ls_test
 	-rm mip_test

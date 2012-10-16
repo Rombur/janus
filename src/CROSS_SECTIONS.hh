@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janu is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef _CROSS_SECTIONS_HH_
 #define _CROSS_SECTIONS_HH_
 
@@ -37,7 +56,8 @@ class CROSS_SECTIONS
         const PERMUTATION_TYPE permutation_type);
 
     /// Read the cross sections generated manually.
-    void Read_regular_cross_sections(const unsigned int n_mat,bool energy_deposition);
+    void Read_regular_cross_sections(const unsigned int n_mat,
+        const PERMUTATION_TYPE permutation_typem,const bool energy_deposition);
 
     /// Build the Fokker-Planck cross sections.
     void Build_fokker_planck_xs(const unsigned int n_mat);
@@ -76,7 +96,11 @@ class CROSS_SECTIONS
     /// Apply the "standard" extended transport correction of the "optimal"
     /// extended transport correction.
     void Apply_transport_correction(const unsigned int i_mat,const unsigned int g,
-        const unsigned int lvl,const double L,double correction);
+        const unsigned int lvl,double correction);
+
+    /// Apply the permutation on the cross sections.
+    void Apply_cross_section_permutation(const PERMUTATION_TYPE permutation_type,
+        const unsigned int n_mat);
 
     /// Return the greatest commun divisor between n_a and n_b.
     unsigned int Compute_gcd(unsigned int n_a,unsigned int n_b);

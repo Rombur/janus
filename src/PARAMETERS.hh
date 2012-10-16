@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janu is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef _PARAMETERS_HH_
 #define _PARAMETERS_HH_
 
@@ -58,7 +77,7 @@ class PARAMETERS
     PARAMETERS(string* parameters_inputfile);
 
     /// Read the parameters input file.
-    void Read_parameters(const unsigned int n_src,const unsigned int n_mat);
+    void Read_parameters(const unsigned int n_src);
 
     /// Return the flag on the transport correction.
     bool Get_transport_correction() const;
@@ -121,7 +140,7 @@ class PARAMETERS
     /// Return the damping factor used by SSOR.
     double Get_damping_factor() const;
 
-    /// Return the type iof aggregation used by ML (uncoupled, mis or
+    /// Return the type of aggregation used by ML (uncoupled, mis or
     /// uncoupled-mis).
     AGGREGATION_TYPE Get_aggregation_type() const;
 
