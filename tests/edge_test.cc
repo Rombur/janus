@@ -97,7 +97,7 @@ int main(int argc,char** argv)
   assert(edge_1.Get_v1_x()==1.4);
   assert(edge_1.Get_v1_y()==1.6);
 
-  // Check the external normal component
+  // Check the exterior normal component
   assert(edge_0.Get_exterior_normal_component(0,0)==3.4);
   assert(edge_0.Get_exterior_normal_component(0,1)==4.3);
   assert(edge_1.Get_exterior_normal_component(0,0)==5.4);
