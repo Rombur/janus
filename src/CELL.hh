@@ -48,6 +48,11 @@ class CELL
         vector<vector<vector<d_vector> > > sigma_s,vector<EDGE*> edges,
         FINITE_ELEMENT* fe);
 
+    CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
+        unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
+        d_vector sigma_e,vector<vector<vector<d_vector> > > sigma_s,
+        vector<EDGE*> edges,FINITE_ELEMENT* fe);
+
     ~CELL();
 
     /// Return the cell id.
@@ -70,11 +75,14 @@ class CELL
     /// Return the diffusion coefficient in the cell for a given energy group.
     double Get_diffusion_coefficient(unsigned int group) const;
 
-    /// Return the \f$\Sigma_t\f$ in the cell for a given energy group and 
+    /// Return \f$\Sigma_e\f$ in the cell for a given energy group.
+    double Get_sigma_e(unsigned int group) const;
+
+    /// Return \f$\Sigma_t\f$ in the cell for a given energy group and 
     /// angular level.
     double Get_sigma_t(unsigned int group,unsigned int lvl) const;
 
-    /// Return the \f$\Sigma_s\f$ in the cell for a given energy group, angular 
+    /// Return \f$\Sigma_s\f$ in the cell for a given energy group, angular 
     /// level, and moment.
     double Get_sigma_s(unsigned int group,unsigned int group_p,unsigned int lvl,
         unsigned int mom) const;
@@ -127,9 +135,11 @@ class CELL
     d_vector D;
     /// Ortogonal length of the cell associated to each edge.
     d_vector orthogonal_length;
+    ///  Energy deposition cross sections.
+    d_vector sigma_e;
     /// Vector of the pointer to edges which compose the cell.
     vector<EDGE*> cell_edges;
-    /// Total cross section in the cell. sigma_t is a vector of vector because of 
+    /// Total cross section in the cell. #sigma_t is a vector of vector because of 
     /// energy groups and angular multigrid.
     vector<d_vector> sigma_t;
     /// Scattering cross section in the cell. sigma_s is a vector of vector of
@@ -169,6 +179,11 @@ inline double CELL::Get_diffusion_coefficient(unsigned int group) const
 {
   return D[group];
 }
+    
+inline double CELL::Get_sigma_e(unsigned int group) const
+{
+  return sigma_e[group];
+}
 
 inline double CELL::Get_sigma_t(unsigned int group,unsigned int lvl) const
 {
@@ -180,6 +195,7 @@ inline double CELL::Get_sigma_s(unsigned int group,unsigned int group_p,
 {
   return sigma_s[group][group_p][lvl][mom];
 }
+
 inline double CELL::Get_orthogonal_length(unsigned int i)
 {
   return orthogonal_length[i];

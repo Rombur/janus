@@ -10,6 +10,7 @@
 #include "Epetra_MultiVector.h"
 #include "Epetra_MultiVector.h"
 #include "CELL.hh"
+#include "CROSS_SECTIONS.hh"
 #include "EDGE.hh"
 #include "LS.hh"
 #include "PARAMETERS.hh"
@@ -103,14 +104,18 @@ int main(int argc,char** argv)
     dof_handler.Get_n_sf_per_dir()*quad[0]->Get_n_dir();
   Epetra_Map flux_moments_map(flux_moments_size,0,comm);
   Epetra_MultiVector flux_moments(flux_moments_map,1);
+  Epetra_MultiVector group_flux(flux_moments_map,1);
 
   // Solve the transport
   TRANSPORT_OPERATOR transport_operator(&dof_handler,&parameters,quad[0],&comm,
       &flux_moments_map,cross_sections.Get_n_groups());
 
+  // Set the current group
+  transport_operator.Set_group(0);
+
   // Compute right-hand side for BiCGSTAB
   Epetra_MultiVector rhs(flux_moments);
-  transport_operator.Sweep(rhs,true);
+  transport_operator.Sweep(rhs,&group_flux);
 
   Epetra_LinearProblem problem(&transport_operator,&flux_moments,&rhs);
 

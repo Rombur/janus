@@ -50,3 +50,8 @@ transport_operator_test_1
 transport_operator_test_2
 utils/conv.py
 atconfig
+cross_sections_fp_test_1
+cross_sections_fp_test_2
+cross_sections_regular_test_1
+cross_sections_regular_test_2
+cross_sections_cepxs_test

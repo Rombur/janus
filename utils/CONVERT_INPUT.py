@@ -106,25 +106,43 @@ class CONVERT_INPUT(object) :
     self.Search("SOLVER")
     self.solver = self.data[self.begin:self.end-1].lower()
 
-# Read the tolerance
-    self.Search("TOLERANCE")
-    self.tolerance = self.Read_next(1)
+# Read the inner tolerance
+    self.Search("INNER TOLERANCE")
+    self.inner_tolerance = self.Read_next(1)
 
-# Read the maximum number of iteration
-    self.Search("MAX ITER")
-    self.max_iter = int(self.Read_next(1))
+# Read the group tolerance
+    self.Search("GROUP TOLERANCE")
+    self.group_tolerance = self.Read_next(1)
+
+# Read the maximum number of inner iterations
+    self.Search("MAX INNER ITER")
+    self.max_inner_iter = int(self.Read_next(1))
+
+# Read the maximum number of supergroup iterations
+    self.Search("MAX SUPERGROUP ITER")
+    self.max_supergroup_iter = int(self.Read_next(1))
+
+# Read the maximum number of group iterations
+    self.Search("MAX GROUP ITER")
+    self.max_group_iter = int(self.Read_next(1))
 
 # Read the sum of the weights of the quadrature
     self.Search("WEIGHT SUM")
     self.weight_sum = self.data[self.begin:self.end-1].lower()
 
+# Read the type of cross section file
+    self.Search("XS TYPE")
+    self.xs_type = self.data[self.begin:self.end-1].lower()
+
+# If the cross sections are not Fokker-Planck cross sections read the type of
+# permutation used
+    if self.xs_type!="fp" :
+      self.Search("PERMUTATION TYPE")
+      self.permutation_type = self.data[self.begin:self.end-1].lower() 
+
 # Read the verbosity level of the code
     self.Search("VERBOSE")
     self.verbose = int(self.Read_next(1))
-
-# Read if Fokker-Planck cross sections are used
-    self.Search("FOKKER-PLANCK XS")
-    self.fokker_planck = self.data[self.begin:self.end-1]
 
 # Read if transport correction is used
     self.Search("TRANSPORT CORRECTION")
@@ -163,21 +181,16 @@ class CONVERT_INPUT(object) :
     self.Search("GALERKIN")
     self.galerkin = self.data[self.begin:self.end-1].lower()
 
-# Read L_max
-    self.Search("L MAX")
-    self.L_max = int(self.Read_next(1))
-
 # Read Sn order
     self.Search("SN ORDER")
     self.sn_order = int(self.Read_next(1))
 
-    if self.galerking=="true" :
-      if self.sn_order!=self.L_max:
-        raise SystemError("SN ORDER and L MAX must be equal when a Galerkin quadrature is used.")
-
 # Read the finite elements type
     self.Search("FE")
     self.fe = self.data[self.begin:self.end-1].lower()
+# Read the number of groups
+    self.Search("NUMBER OF GROUPS")
+    self.n_groups = int(self.Read_next(1))
 
 # Read the intensity of the source
     self.Search("SOURCE")
@@ -223,18 +236,6 @@ class CONVERT_INPUT(object) :
       self.Search("LEFT INCOMING FLUX")
       self.inc_left = self.Read_next(1)
 
-# Read the total cross sections
-    self.Search("TOTAL XS")
-    self.total_xs = self.String_to_np()
-
-# If Fokker-Planck cross section are used, read alpha
-    if self.fokker_planck=="true" :
-      self.Search("ALPHA")
-      self.scattering_xs = self.String_to_np()
-    else :
-      self.Search("SCATTERING XS")
-      self.scattering_xs = self.String_to_np()
-
     input_file.close()
 
 #----------------------------------------------------------------------------#
@@ -256,20 +257,25 @@ class CONVERT_INPUT(object) :
     else :
       self.Abort("Unknown solver.")
 
-# Write the tolerance
-    output_file.write(str(self.tolerance)+" ")
+# Write the tolerances
+    output_file.write(str(self.inner_tolerance)+" ")
+    output_file.write(str(self.group_tolerance)+" ")
 
 # Write the maximum number of iterations
-    output_file.write(str(self.max_iter)+" ")
+    output_file.write(str(self.max_inner_iter)+" ")
+    output_file.write(str(self.max_supergroup_iter)+" ")
+    output_file.write(str(self.max_group_iter)+" ")
 
 # Write the sum of the weight of the quadrature
     output_file.write(self.weight_sum+" ")
 
+# Write the type of cross section file
+    output_file.write(self.xs_type+" ")
+    if self.xs_type!="fp" :
+      output_file.write(self.permutation_type+" ")
+
 # Write the verbosity level of the code
     output_file.write(str(self.verbose)+"\n")
-
-# Write Fokker-Planck cross section flag
-    output_file.write(self.fokker_planck+"\n")
 
 # Write transport correction flag
     output_file.write(self.transport_correction+"\n")
@@ -317,9 +323,6 @@ class CONVERT_INPUT(object) :
 # Write the galerkin flag
     output_file.write(self.galerkin+"\n")
 
-# Write L_max
-    output_file.write(str(self.L_max)+"\n")
-
 # Write Sn order
     output_file.write(str(self.sn_order)+"\n")
 
@@ -330,6 +333,9 @@ class CONVERT_INPUT(object) :
       output_file.write("PWLD\n")
     else :
       self.Abort("Unknown finite element\n")
+
+# Write the number of energy groups
+    output_file.write(str(self.n_groups)+"\n")
 
 # Write the source intensity
     for src in self.source :
@@ -395,14 +401,5 @@ class CONVERT_INPUT(object) :
 # Write the top incoming flux if necessary
     if self.left_bc_type=="most normal" or self.left_bc_type=="isotropic" :
       output_file.write(str(self.inc_left)+"\n")
-
-# Write the cross sections
-    offset = 0
-    for i in xrange(self.total_xs.shape[0]) :
-      output_file.write(str(self.total_xs[i]))
-      for j in xrange(self.scattering_xs.shape[0]/self.total_xs.shape[0]) :
-        output_file.write(" "+str(self.scattering_xs[offset+j]))
-      output_file.write("\n")
-      offset += self.scattering_xs.shape[0]/self.total_xs.shape[0]
 
     output_file.close()

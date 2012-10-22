@@ -20,6 +20,7 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 #include "CROSS_SECTIONS.hh"
 
 CROSS_SECTIONS::CROSS_SECTIONS(string* cross_section_inputfile) :
+  sigma_e_flag(false),
   L_max(0),
   n_g_groups(0),
   n_e_groups(0),
@@ -92,6 +93,8 @@ void CROSS_SECTIONS::Read_cepxs_cross_sections(const unsigned int n_mat,
   // Close the file
   cross_section_file.close();
 
+  sigma_e_flag =true;
+
   // Apply the permutation on the cross sections
   Apply_cross_section_permutation(permutation_type,n_mat);
 }
@@ -142,6 +145,8 @@ void CROSS_SECTIONS::Read_regular_cross_sections(const unsigned int n_mat,
   // Close the file
   cross_section_file.close();
 
+  sigma_e_flag = energy_deposition;
+
   // Apply the permutation on the cross sections
   Apply_cross_section_permutation(permutation_type,n_mat);
 }
@@ -150,6 +155,7 @@ void CROSS_SECTIONS::Build_fokker_planck_xs(const unsigned int n_mat)
 {
   // Open the file to read it
   ifstream cross_section_file(cross_section_filename->c_str(),ios::in);
+  
 
   // Check that the file was open properly
   Check(cross_section_file.good(),string("Unable to open the file ") +

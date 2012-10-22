@@ -21,13 +21,65 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 
 CELL::CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
         unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
-        vector<vector<vector<d_vector> > > sigma_s,
+        vector<vector<vector<d_vector> > > sigma_s,vector<EDGE*> edges,
+        FINITE_ELEMENT* fe) :
+  id(cell_id),
+  n_vertices(n_vertices),
+  first_dof(first_dof),
+  last_dof(last_dof),
+  source(source),
+  cell_edges(edges),
+  sigma_t(sigma_t),
+  sigma_s(sigma_s),
+  fe(fe)
+{
+  unsigned int n_groups(sigma_t.size());
+  unsigned int n_level(sigma_t[0].size());
+  D.resize(n_groups);
+  for (unsigned int g=0; g<n_groups; ++g)
+  {
+    if (sigma_s[n_level-1].size()>1)
+      D[g] = 1./(3.*(sigma_t[g][n_level-1]-sigma_s[g][g][n_level-1][1]));
+    else
+      D[g] = 1./(3.*sigma_t[g][n_level-1]);
+  }
+
+  // Compute the area and the perimeter of the cell.
+  Compute_area_and_perimeter();
+
+  // Compute the length of the cell in the direction orthogonal to the edge.
+  orthogonal_length.resize(n_vertices);
+  if (n_vertices==3)
+    for (unsigned int i=0; i<n_vertices; ++i)
+      orthogonal_length[i] = 2.*area/cell_edges[i]->Get_length();
+  else
+  {
+    if (n_vertices==4)
+      for (unsigned int i=0; i<n_vertices; ++i)
+        orthogonal_length[i] = area/cell_edges[i]->Get_length();
+    else
+    {
+      if (n_vertices%2==0)
+        for (unsigned int i=0; i<n_vertices; ++i)
+          orthogonal_length[i] = 4.*area/perimeter;
+      else
+        for(unsigned int i=0; i<n_vertices; ++i)
+          orthogonal_length[i] = 2.*area/perimeter+sqrt(2.*area/(n_vertices*
+                sin(2.*M_PI/n_vertices)));
+    }
+  }
+}
+
+CELL::CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
+        unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
+        d_vector sigma_e,vector<vector<vector<d_vector> > > sigma_s,
         vector<EDGE*> edges,FINITE_ELEMENT* fe) :
   id(cell_id),
   n_vertices(n_vertices),
   first_dof(first_dof),
   last_dof(last_dof),
   source(source),
+  sigma_e(sigma_e),
   cell_edges(edges),
   sigma_t(sigma_t),
   sigma_s(sigma_s),

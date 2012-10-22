@@ -53,12 +53,7 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
     (quad->Get_n_mom(),Teuchos::SerialDenseVector<int,double> 
      (dof_handler->Get_n_dof()));
   if (param->Get_mip()==true)
-  {
-    if (param->Get_transport_correction()==true)
-      precond = new MIP (1,dof,param,quad,comm);
-    else
-      precond = new MIP (0,dof,param,quad,comm);
-  }
+    precond = new MIP (0,dof,param,quad,comm);
 }
 
 TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
@@ -132,7 +127,7 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
 
   if (param->Get_multigrid()==true)
   {
-    if (lvl!=max_lvl-1)
+    if (lvl!=max_lvl)
     {
       Epetra_MultiVector z(y);
       Epetra_Map coarse_map(n_dof*(*quad_vector)[lvl+1]->Get_n_mom(),0,*comm);
@@ -141,6 +136,7 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
 
       Epetra_MultiVector coarse_y(coarse_transport.Restrict_vector(y));
       Epetra_MultiVector coarse_x(coarse_y);
+      coarse_transport.Set_group(group);
       coarse_transport.Apply(coarse_x,coarse_y);
 
       // Project y on z. 
@@ -185,7 +181,7 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
 
 void TRANSPORT_OPERATOR::Apply_preconditioner(Epetra_MultiVector &x) 
 {
-  if (lvl!=max_lvl-1)
+  if (lvl!=max_lvl)
   {
     Epetra_MultiVector y(x);
     Epetra_Map coarse_map(n_dof*(*quad_vector)[lvl+1]->Get_n_mom(),0,*comm);
@@ -193,6 +189,7 @@ void TRANSPORT_OPERATOR::Apply_preconditioner(Epetra_MultiVector &x)
         &coarse_map,lvl+1,max_lvl,n_groups,precond);
 
     Epetra_MultiVector coarse_y(coarse_transport.Restrict_vector(y));
+    coarse_transport.Set_group(group);
     coarse_transport.Apply_preconditioner(coarse_y);
 
     // Project y on x. 
@@ -286,7 +283,7 @@ void TRANSPORT_OPERATOR::Compute_outer_scattering_source(
   }
 }
 
-void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs,
+void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,
     Epetra_MultiVector const* const group_flux) const
 {
   const unsigned int n_cells(dof_handler->Get_n_cells());
@@ -334,7 +331,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs,
         A.values()[i] += -omega_0*x_grad_matrix->values()[i]-omega_1*
           y_grad_matrix->values()[i];
 
-      // Volumetric term of the rhs
+      // Scattering source
       for (unsigned int mom=0; mom<n_mom; ++mom)
       {
         const double m2d((*M2D)(idir,mom));
@@ -342,7 +339,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs,
         for (unsigned int j=0; j<dof_per_cell; ++j)
           b.values()[j] += m2d*scat_src_val[offset+j];
       }
-      if (rhs==true)
+      if (group_flux!=NULL)
       {
         // Divide the source by the sum of the weights so the input source is 
         // easier to set
@@ -401,7 +398,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs,
           {
             Teuchos::SerialDenseMatrix<int,double> const* const downwind(
                 fe->Get_downwind_matrix(edge_lid));
-            if ((rhs==true) && ((*cell_edge)->Get_bc_type()!=reflective))
+            if ((group_flux!=NULL) && ((*cell_edge)->Get_bc_type()!=reflective))
             {
               double inc_flux_norm(0.);
               if ((*cell_edge)->Get_edge_type()==bottom_boundary)
@@ -478,7 +475,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs,
       if (reflective_b==true)
         Store_saf(psi,flux_moments,cell,idir,n_mom,dof_per_cell);
     }
-    // Update scalar flux
+    // Update flux moments
     for (unsigned int mom=0; mom<n_mom; ++mom)
     {
       const unsigned int offset(mom*n_dof);

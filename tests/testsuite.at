@@ -205,8 +205,7 @@ AT_DATA([geometry_transport_2.inp],[polygon
 3 3. 2. 3. 3. 2. 3. 1 0
 8 1. 0. 2. 0. 3. 1. 3. 2. 2. 3. 1. 3. 0. 2. 0. 1. 0 1
 ])
-AT_DATA([parameters_transport_2.inp],[GMRES 1e-06 10000 4_PI 0
-true
+AT_DATA([parameters_transport_2.inp],[GMRES 1e-06 1e-06 10000 100 100 4_PI fp 0
 true
 true
 true
@@ -216,19 +215,18 @@ MIS
 GLC
 true
 8
-8
 PWLD
-0.0 1.0 
+1
+0.0 
+1.0 
 vacuum
 vacuum
 vacuum
 most_normal 1.0
+])
+AT_DATA([cross_sections_transport_2.inp],[2 8
 36.0 1.0
 72.0 0.5
 ])
-dnl AT_CHECK([transport_operator_test_2],[],[ignore],[])
-AT_CHECK([],[a],[])
-AT_CLEANUP
-AT_SETUP([TRANSPORT OPERATOR: PWLD MULTIGROUP])
-AT_CHECK([],[a],[])
+AT_CHECK([transport_operator_test_2],[],[ignore],[])
 AT_CLEANUP

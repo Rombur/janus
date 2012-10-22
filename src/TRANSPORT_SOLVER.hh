@@ -84,9 +84,9 @@ class TRANSPORT_SOLVER
     string* outputfile;
     /// Epetra communicator.
     Epetra_MpiComm* comm;
-    /// Flux moments vector.
-    Epetra_MultiVector* flux_moments;
-    /// Epetra map associated to the #flux_moments.
+    /// MultiVector of the groups of flux moments.
+    Epetra_MultiVector* group_flux;
+    /// Epetra map associated to the flux moments.
     Epetra_Map* flux_moments_map;
     /// Cross sections of the problem.
     CROSS_SECTIONS cross_sections;

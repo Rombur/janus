@@ -117,6 +117,12 @@ MIP::~MIP()
   }
 }
 
+void MIP::Free_ml()
+{
+  delete ml_prec;
+  ml_prec = NULL;
+}
+
 void MIP::Set_group(unsigned int g)
 {
   if (g!=group)

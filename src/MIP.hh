@@ -86,6 +86,9 @@ class MIP
 
     ~MIP();
 
+    /// Delete the ML object before MPI_Finalize() is called.
+    void Free_ml();
+
     /// Set the value of group and if necessary delete A or a and the
     /// preconditioner for CG.
     void Set_group(unsigned int g);

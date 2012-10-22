@@ -67,6 +67,9 @@ class CROSS_SECTIONS
     void Apply_ang_lvls_and_tc(const bool ang_lvls,const bool tc,const bool optimal,
         const unsigned int n_mat,const unsigned int sn);
 
+    /// Return the flag on the existence of energy deposition cross sections.
+    bool Sigma_e_exist() const;
+
     /// Return #L_max.
     unsigned int Get_L_max() const;
 
@@ -83,10 +86,13 @@ class CROSS_SECTIONS
     /// Return the number of "angular levels" (DSA counts as an angular level).
     unsigned int Get_n_levels() const;
 
-    /// Return sigma_t for the material i.
+    /// Return the energy deposition cross sections for the material i.
+    d_vector Get_sigma_e(unsigned int i) const;
+
+    /// Return the total cross sections for the material i.
     vector<d_vector> Get_sigma_t(unsigned int i) const;
 
-    /// Return sigma_s for the material i.
+    /// Return the scattering cross sections for the material i.
     vector<vector<vector<d_vector> > > Get_sigma_s(unsigned int i) const;
 
   private :
@@ -122,6 +128,8 @@ class CROSS_SECTIONS
     void Create_log_permutation(vector<d_vector> &permutation_m,
         ui_vector &permutation_b);
 
+    /// Flag for #sigma_e
+    bool sigma_e_flag;
     /// L_max.
     unsigned int L_max;
     /// Number of photon (gamma) groups.
@@ -152,6 +160,11 @@ class CROSS_SECTIONS
     /// multigrid.
     vector<vector<vector<vector<d_vector> > > > sigma_s_lvl;
 };
+    
+inline bool CROSS_SECTIONS::Sigma_e_exist() const
+{
+  return sigma_e_flag;
+}
 
 inline unsigned int CROSS_SECTIONS::Get_L_max() const
 {
@@ -176,6 +189,11 @@ inline unsigned int CROSS_SECTIONS::Get_n_grps_in_supergrp() const
 inline unsigned int CROSS_SECTIONS::Get_n_levels() const
 {
   return n_levels;
+}
+
+inline d_vector CROSS_SECTIONS::Get_sigma_e(unsigned int i) const
+{
+  return sigma_e[i];
 }
 
 inline vector<d_vector> CROSS_SECTIONS::Get_sigma_t(unsigned int i) const

@@ -86,11 +86,23 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS const &param,
       start_reflective_dof += fe->Get_dof_per_cell();
     }
     // Create the cells and append them in mesh
-    CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
+    if (cross_sections.Sigma_e_exist()==false)
+    {
+      CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
           param.Get_src(triangulation->Get_src_id(i)),
           cross_sections.Get_sigma_t(triangulation->Get_mat_id(i)),
           cross_sections.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
-    mesh.push_back(cell);
+      mesh.push_back(cell);
+    }
+    else
+    {
+      CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
+          param.Get_src(triangulation->Get_src_id(i)),
+          cross_sections.Get_sigma_t(triangulation->Get_mat_id(i)),
+          cross_sections.Get_sigma_e(triangulation->Get_mat_id(i)),
+          cross_sections.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
+      mesh.push_back(cell);
+    }
     start_dof += fe->Get_dof_per_cell();
     if (fe->Get_dof_per_cell()>max_dof_per_cell)
       max_dof_per_cell = fe->Get_dof_per_cell();
@@ -160,13 +172,13 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
           if ((*omega)[1]>0)
           {
             for (int y=0; y<n_y_cells; ++y)
-              for (int x=n_x_cells-1; x>0; --x)
+              for (int x=n_x_cells-1; x>-1; --x)
                 idir_sweep_order.push_back(x+y*n_x_cells);
           }
           else
           {
-            for (int y=n_y_cells-1; y>0; --y)
-              for (int x=n_x_cells-1; x>0; --x)
+            for (int y=n_y_cells-1; y>-1; --y)
+              for (int x=n_x_cells-1; x>-1; --x)
                 idir_sweep_order.push_back(x+y*n_x_cells);
           }
         }

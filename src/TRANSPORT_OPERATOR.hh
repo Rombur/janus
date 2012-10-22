@@ -71,11 +71,11 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// Compute the scattering given a flux.
     void Compute_scattering_source(Epetra_MultiVector const &x) const;
 
-    /// Perform a sweep. If rhs is false, the surfacic and the volumetric
+    /// Perform a sweep. If group_flux is NULL, the surfacic and the volumetric
     /// sources are not included in the sweep.
     /// @todo The sweep can be optimized to use less memory (only keep the
     /// front wave).
-    void Sweep(Epetra_MultiVector &flux_moments,bool rhs=false,
+    void Sweep(Epetra_MultiVector &flux_moments,
         Epetra_MultiVector const* const group_flux=NULL) const;
 
     /// This method is not implemented.
