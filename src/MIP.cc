@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -19,8 +19,8 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "MIP.hh"
 
-MIP::MIP(unsigned int level,DOF_HANDLER* dof,PARAMETERS const* param,
-    QUADRATURE const* quad,Epetra_Comm const* comm) :
+MIP::MIP(Epetra_Comm const* comm,PARAMETERS const* param,DOF_HANDLER* dof,
+        QUADRATURE const* quad,unsigned int level):
   group(0),
   lvl(level),
   ia(NULL),
@@ -173,14 +173,12 @@ void MIP::Set_group(unsigned int g)
   }
 }
 
-void MIP::Solve(Epetra_MultiVector &flux_moments)
+void MIP::Solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector* initial_guess)
 {
   // Restrict the Krylov vector to build the lhs
   if (mip_map==NULL)
     mip_map = new Epetra_Map(dof_handler->Get_n_dof(),0,*comm);
   Epetra_MultiVector b(*mip_map,1);
-  for (unsigned int i=0; i<dof_handler->Get_n_dof(); ++i)
-    b[0][i] = flux_moments[0][i];
 
   // Compute the right-hand side
   Compute_rhs(flux_moments,b);
@@ -199,23 +197,88 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
   {
     case cg_none :
       {
-        Cg_solve(flux_moments,b);
+        Cg_solve(true,flux_moments,b,initial_guess);
         break;
       }
     case cg_ssor :
       {
-        Cg_ssor_solve(flux_moments,b);
+        Cg_ssor_solve(true,flux_moments,b,initial_guess);
         break;
       }
     case cg_ml :
       {
-        Cg_ml_solve(flux_moments,b);
+        Cg_ml_solve(true,flux_moments,b,initial_guess);
         break;
       }
 #ifdef AGMG
     case agmg :
       {
-        Agmg_solve(flux_moments,b);
+        Agmg_solve(true,flux_moments,b,initial_guess);
+        break;
+      }
+#endif
+    default :
+      {
+        Check(false,"Unknown solver for MIP.");
+      }
+  }
+}
+
+void MIP::Solve_diffusion(const unsigned int n_groups,
+    Epetra_MultiVector &flux_moments,Epetra_MultiVector const &group_flux,
+    Epetra_MultiVector* initial_guess)
+{
+  mip_map = new Epetra_Map(dof_handler->Get_n_dof(),0,*comm);
+  Epetra_MultiVector b(*mip_map,1);
+
+  // Compute the right-hand side
+  Compute_diffusion_rhs(n_groups,group_flux,b);
+
+  // Build the left-hand side
+  int* n_entries_per_row = new int[dof_handler->Get_n_dof()];
+  Compute_n_entries_per_row(n_entries_per_row);
+  A = new Epetra_CrsMatrix(Copy,*mip_map,n_entries_per_row);
+  Build_lhs();
+
+  for (unsigned int i=0; i<dof_handler->Get_n_dof();++i)
+  {
+    Epetra_MultiVector a0(*mip_map,1);
+    Epetra_MultiVector a1(*mip_map,1);
+    Epetra_MultiVector b0(*mip_map,1);
+    Epetra_MultiVector b1(*mip_map,1);
+    a0[0][i] = 1.0;
+    a1[0][i] = 1.0;
+    A->SetUseTranspose(true);
+    A->Apply(a0,b0);
+    A->SetUseTranspose(false);
+    A->Apply(a1,b1);
+    for (unsigned int j=0; j<dof_handler->Get_n_dof();++j)
+      if (fabs(b0[0][j]-b1[0][j])>1e-3)
+        cout<<"Fuck it "<<i<<" "<<j<<" "<<b0[0][j]<<" "<<b1[0][j]<<endl;
+  }
+
+  // Solve the system of equation
+  switch (parameters->Get_mip_solver_type())
+  {
+    case cg_none :
+      {
+        Cg_solve(false,flux_moments,b,initial_guess);
+        break;
+      }
+    case cg_ssor :
+      {
+        Cg_ssor_solve(false,flux_moments,b,initial_guess);
+        break;
+      }
+    case cg_ml :
+      {
+        Cg_ml_solve(false,flux_moments,b,initial_guess);
+        break;
+      }
+#ifdef AGMG
+    case agmg :
+      {
+        Agmg_solve(false,flux_moments,b,initial_guess);
         break;
       }
 #endif
@@ -321,6 +384,85 @@ void MIP::Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b)
       b[0][i] = b_cell(i-i_min);
   }
 }
+
+void MIP::Compute_diffusion_rhs(const unsigned int n_groups,
+    Epetra_MultiVector const &x,Epetra_MultiVector &b)
+{
+  Teuchos::BLAS<int,double> blas;
+  vector<CELL*>::iterator cell(dof_handler->Get_mesh_begin());
+  vector<CELL*>::iterator cell_end(dof_handler->Get_mesh_end());
+
+  for (; cell<cell_end; ++cell)
+  {
+    const unsigned int i_min((*cell)->Get_first_dof());
+    const unsigned int i_max((*cell)->Get_last_dof());
+    FINITE_ELEMENT const* const fe((*cell)->Get_fe());
+    unsigned int dof_per_cell(fe->Get_dof_per_cell());
+    Teuchos::SerialDenseVector<int,double> x_cell(dof_per_cell);
+    Teuchos::SerialDenseVector<int,double> b_cell(dof_per_cell);
+    Teuchos::SerialDenseMatrix<int,double> const* const mass_matrix(
+        fe->Get_mass_matrix());
+    vector<EDGE*>::iterator cell_edge((*cell)->Get_cell_edges_begin());
+    vector<EDGE*>::iterator cell_edge_end((*cell)->Get_cell_edges_end());
+    
+    // Compute the volumetric terms
+    for (unsigned int g=0; g<n_groups; ++g)
+    {
+      if (g!=group)
+      {
+        for (unsigned int i=i_min; i<i_max; ++i)
+          x_cell(i-i_min) = x[g][i];
+        blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
+          (*cell)->Get_sigma_s(g,group,0,0),mass_matrix->values(),
+          mass_matrix->stride(),x_cell.values(),1,1.,b_cell.values(),1);
+      }
+      else
+      {
+
+        const double src((*cell)->Get_source(group));
+        for (unsigned int k=0; k<dof_per_cell; ++k)
+        {
+          double const* mass_matrix_k((*mass_matrix)[k]);
+          for (unsigned int j=0; j<dof_per_cell; ++j)
+            b_cell.values()[j] += src*mass_matrix_k[j];
+        }
+      }
+    }
+
+    // Compute the Neumann boundary term.
+    for (; cell_edge<cell_edge_end; ++cell_edge)
+    {                
+      if ((*cell_edge)->Is_interior()==false)
+      {
+        if ((*cell_edge)->Get_bc_type()==isotropic)
+        {
+          double inc_flux_norm(.0);
+          if ((*cell_edge)->Get_edge_type()==bottom_boundary)
+            inc_flux_norm = parameters->Get_inc_bottom(group);
+          if ((*cell_edge)->Get_edge_type()==right_boundary)
+            inc_flux_norm = parameters->Get_inc_right(group);
+          if ((*cell_edge)->Get_edge_type()==top_boundary)
+            inc_flux_norm = parameters->Get_inc_top(group);
+          if ((*cell_edge)->Get_edge_type()==left_boundary)
+            inc_flux_norm = parameters->Get_inc_left(group);
+          unsigned int edge_lid((*cell_edge)->Get_lid(0));
+          Teuchos::SerialDenseMatrix<int,double> const* const downwind_matrix(
+              fe->Get_downwind_matrix(edge_lid));
+          for (unsigned int i=0; i<dof_per_cell; ++i)
+            x_cell(i) = inc_flux_norm;
+          blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,1.,
+              downwind_matrix->values(),downwind_matrix->stride(),
+              x_cell.values(),1,1.,b_cell.values(),1);
+        }
+      }
+    }
+
+    // Convert the result back to the Epetra_MultiVector.
+    for (unsigned int i=i_min; i<i_max; ++i)
+      b[0][i] = b_cell(i-i_min);
+  }
+}
+
 
 void MIP::Build_lhs()
 {
@@ -584,16 +726,19 @@ double MIP::Compute_penalty_coefficient(double D_m,double D_p,double h_m,
   return k_mip;
 }
 
-void MIP::Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
+void MIP::Cg_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+    Epetra_MultiVector &b,Epetra_MultiVector* initial_guess)
 {
   Epetra_MultiVector x(*mip_map,1);
+  if (initial_guess!=NULL)
+    x = *initial_guess;
   Epetra_LinearProblem problem(A,&x,&b);
   AztecOO solver(problem);
 
   // No preconditioner is used
   solver.SetAztecOption(AZ_precond,AZ_none);
   // Use CG
-  solver.SetAztecOption(AZ_solver,AZ_cg); 
+  solver.SetAztecOption(AZ_solver,AZ_cg_condnum); 
   // Convergence criterion ||r||_2/||b||_2
   solver.SetAztecOption(AZ_conv,AZ_rhs);
   // Get the verbosity of the output
@@ -629,12 +774,18 @@ void MIP::Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   solve_timer->stop();
 
   // Project the solution
-  Project_solution(flux_moments,x);
+  if (dsa==true)
+    Project_solution(flux_moments,x);
+  else
+    flux_moments = x;
 }
 
-void MIP::Cg_ssor_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
+void MIP::Cg_ssor_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+    Epetra_MultiVector &b,Epetra_MultiVector* initial_guess)
 {
   Epetra_MultiVector x(*mip_map,1);
+  if (initial_guess!=NULL)
+    x = *initial_guess;
   Epetra_LinearProblem problem(A,&x,&b);
   AztecOO solver(problem);
   
@@ -691,12 +842,18 @@ void MIP::Cg_ssor_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   solve_timer->stop();
 
   // Project the solution
-  Project_solution(flux_moments,x);
+  if (dsa==true)
+    Project_solution(flux_moments,x);
+  else
+    flux_moments = x;
 }
 
-void MIP::Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
+void MIP::Cg_ml_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+    Epetra_MultiVector &b,Epetra_MultiVector* initial_guess)
 {
   Epetra_MultiVector x(*mip_map,1);
+  if (initial_guess!=NULL)
+    x = *initial_guess;
   Epetra_LinearProblem problem(A,&x,&b);
   AztecOO solver(problem);
 
@@ -761,11 +918,15 @@ void MIP::Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   solve_timer->stop();
 
   // Project the solution
-  Project_solution(flux_moments,x);
+  if (dsa==true)
+    Project_solution(flux_moments,x);
+  else
+    flux_moments = x;
 }
 
 #ifdef AGMG
-void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
+void MIP::Agmg_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+    Epetra_MultiVector &b,Epetra_MultiVector* initial_guess)
 {
   int n(dof_handler->Get_n_dof());
   int iprint(6);
@@ -781,6 +942,12 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   
   // Convert the right-hand side to fortran
   Convert_to_fortran(b,f,n);
+  // Convert the initial guess
+  if (initial_guess!=NULL)
+  {
+    Convert_to_fortran(*initial_guess,x,n);
+    ijob = 12;
+  }
 
   // If A has not been converted to fortran yet, we do it now
   if (a==NULL)
@@ -803,7 +970,10 @@ void MIP::Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b)
   Convert_to_epetra(epetra_x,x,n);
   
   // Project the solution
-  Project_solution(flux_moments,epetra_x);
+  if (dsa==true)
+    Project_solution(flux_moments,epetra_x);
+  else
+    flux_moments = epetra_x;
 
   delete [] f;
   delete [] x;

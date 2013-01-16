@@ -3,11 +3,11 @@ VPATH = $(code_dir)
 OBJECTS = cell_test cross_sections_fp_test_1 cross_sections_fp_test_2\
 				 	cross_sections_regular_test_1 cross_sections_regular_test_2\
 				 	cross_sections_cepxs_test dof_handler_test edge_test glc_test\
-					ls_test mip_test parameters_test_1 parameters_test_2 pwld_test\
-				 	transport_operator_test_1	transport_operator_test_2\
-					triangulation_rec_test triangulation_pol_test
+					ls_test mip_dsa_test mip_diffusion_test parameters_diffusion_test\
+				 	parameters_test_1	parameters_test_2 pwld_test	transport_operator_test_1\
+					transport_operator_test_2 triangulation_rec_test triangulation_pol_test
 
-CXXFLAGS = -Wall $(AGMG_CXXFLAGS) $(GSL_CXXFLAGS) $(TRILINOS_CXXFLAGS) $(LAPACK_CXXFLAGS) $(BLAS_CXXFLAGS) $(MPI_CXXFLAGS)
+CXXFLAGS = -Wall -g $(AGMG_CXXFLAGS) $(GSL_CXXFLAGS) $(TRILINOS_CXXFLAGS) $(LAPACK_CXXFLAGS) $(BLAS_CXXFLAGS) $(MPI_CXXFLAGS)
 LIBFLAGS = $(AGMG_LIBS) $(GSL_LIBS) $(TRILINOS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(MPI_LIBS)
 
 cell_test : cell_test.o BLD.o CELL.o EDGE.o EXCEPTION.o
@@ -74,11 +74,25 @@ ls_test : ls_test.o LS.o QUADRATURE.o EXCEPTION.o
 ls_test.o : ls_test.cc
 	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $<
 
-mip_test : mip_test.o DOF_HANDLER.o GLC.o MIP.o PARAMETERS.o QUADRATURE.o\
+mip_dsa_test : mip_dsa_test.o DOF_HANDLER.o GLC.o MIP.o PARAMETERS.o QUADRATURE.o\
 	TRIANGULATION.o MIP.o BLD.o EDGE.o PWLD.o CELL.o EXCEPTION.o CROSS_SECTIONS.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
 
-mip_test.o : mip_test.cc
+mip_dsa_test.o : mip_dsa_test.cc
+	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $<
+
+mip_diffusion_test : mip_diffusion_test.o DOF_HANDLER.o GLC.o MIP.o PARAMETERS.o\
+ 	QUADRATURE.o TRIANGULATION.o MIP.o BLD.o EDGE.o PWLD.o CELL.o EXCEPTION.o\
+ 	CROSS_SECTIONS.o ERROR_ESTIMATOR.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
+
+mip_diffusion_test.o : mip_diffusion_test.cc
+	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $<
+
+parameters_diffusion_test : parameters_diffusion_test.o PARAMETERS.o EXCEPTION.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBFLAGS)
+
+parameters_diffusion_test.o : parameters_diffusion_test.cc
 	$(CXX) $(CXXFLAGS) -I/$(code_dir) -c $<
 
 parameters_test_1 : parameters_test_1.o PARAMETERS.o EXCEPTION.o
@@ -151,7 +165,9 @@ clean-local:
 	-rm edge_test
 	-rm glc_test
 	-rm ls_test
-	-rm mip_test
+	-rm mip_dsa_test
+	-rm mip_diffusion_test
+	-rm parameters_diffusion_test
 	-rm parameters_test_1
 	-rm parameters_test_2
 	-rm pwld_test

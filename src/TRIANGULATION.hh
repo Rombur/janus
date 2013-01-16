@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -20,6 +20,7 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _TRIANGULATION_HH_
 #define _TRIANGULATION_HH_
 
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <set>
@@ -36,6 +37,7 @@ typedef set<unsigned int> ui_set;
 typedef vector<unsigned int> ui_vector;
 typedef vector<double> d_vector;
 typedef vector<int> i_vector;
+typedef vector<unsigned int> ui_vector;
 
 /// Type of the cell: rectangle or arbitrary polygon.
 enum CELL_TYPE{rectangle,polygon};
@@ -50,6 +52,19 @@ class TRIANGULATION
 
     /// Construct all the edges of the triangulation.
     void Build_edges();
+
+    /// Modify the grid by refining the cells whose cell IDs are in
+    /// cells_to_refine. The cells whose IDs are in adjacent_cells have one
+    /// or more of their edges refined. edge_to_refine contains the vertex
+    /// which precedes (positive rotation) the new vertex. projection is the
+    /// map of interpolation between the old and the new grid.
+    /// @todo Should not be necessary to rebuild the edges.
+    void Refine_mesh(ui_set const &cells_to_refine,ui_set const &adjacent_cells,
+        map<unsigned int,vector<d_vector> > &edge_to_refine,
+        vector<ui_vector> &projection){};
+    void Refine_mesh(ui_set const &cells_to_refine,ui_set const &adjacent_cells,
+        map<unsigned int,vector<vector<d_vector> > > &edge_to_refine,
+        vector<ui_vector> &projection);
 
     /// Get the number of cells.
     unsigned int Get_n_cells() const;
@@ -100,6 +115,11 @@ class TRIANGULATION
     /// Get the #EDGE_TYPE of an edge, when its vertices are known.
     EDGE_TYPE Get_edge_type(d_vector const &vertex_0,d_vector const &vertex_1);
 
+    void Project(unsigned int i,unsigned int dof,unsigned int &pos,
+        unsigned int n_old_vertices,
+        d_vector const &vertex,vector<ui_vector> &projection,
+        vector<vector<d_vector> > const &coarsest_vertices);
+
     /// Number of cells.
     unsigned int n_cells;
     /// Number of cells along x when rectangular cells are used.
@@ -132,7 +152,9 @@ class TRIANGULATION
     /// Contains the edge global id associated to each cell.
     vector<d_vector> cell_to_edge_gid;
     /// grid contains the coordinates of each vertices for each cells. The
-    /// data is stored by [cell,vertex,componant].
+    /// data is stored by [cell,vertex,component]. The first component is the
+    /// abcissa, the second component is the ordinate, and the third component
+    /// is coarse flag (0 if the vertex is coarse, 1 otherwise).
     vector<vector<d_vector> > grid;
 };
 

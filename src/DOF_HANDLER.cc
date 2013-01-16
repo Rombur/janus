@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -43,8 +43,7 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS const &param,
     if (param.Get_fe_type()==bld)
       fe = new BLD(x,y);
     else
-      if (param.Get_fe_type()==pwld)
-        fe = new PWLD(x,y);
+      fe = new PWLD(x,y);
     vector<EDGE*> cell_edges(n_vertices);
     bool cell_saf(false);
     for (unsigned int j=0; j<n_vertices; ++j)

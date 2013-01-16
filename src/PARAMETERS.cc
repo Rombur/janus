@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -20,6 +20,8 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 #include "PARAMETERS.hh"
 
 PARAMETERS::PARAMETERS(string* parameters_inputfile) :
+  n_refinements(0),
+  refinement_threshold(0.),
   parameters_filename(parameters_inputfile)
 {}
 
@@ -29,7 +31,7 @@ void PARAMETERS::Read_parameters(const unsigned int n_src)
   ifstream parameters_file(parameters_filename->c_str(),ios::in);
 
   // Check that the file was open properly
-  Check(parameters_file.good(),string ("unable to open the file "+
+  Check(parameters_file.good(),string ("Unable to open the file "+
         *parameters_filename + " containing the parameters."));
 
   string weight_sum_str;
@@ -259,7 +261,9 @@ void PARAMETERS::Read_parameters(const unsigned int n_src)
         bottom_bc_type = isotropic;
       }
       // Read bottom incoming flux
-      parameters_file>>inc_bottom;
+      inc_bottom.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_bottom[g];
     }
   }
   // Read the type of boundary condition on the right side
@@ -281,7 +285,9 @@ void PARAMETERS::Read_parameters(const unsigned int n_src)
         right_bc_type = isotropic;
       }
       // Read right incoming flux
-      parameters_file>>inc_right;
+      inc_right.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_right[g];
     }
   }
   // Read the type of boundary condition on the top side
@@ -303,7 +309,9 @@ void PARAMETERS::Read_parameters(const unsigned int n_src)
         top_bc_type = isotropic;
       }
       // Read right incoming flux
-      parameters_file>>inc_top;
+      inc_top.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_top[g];
     }
   }
   // Read the type of boundary condition on the left side
@@ -325,7 +333,9 @@ void PARAMETERS::Read_parameters(const unsigned int n_src)
           left_bc_type = isotropic;
       }
       // Read right incoming flux
-      parameters_file>>inc_left;
+      inc_left.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_left[g];
     }
   }
 
@@ -337,4 +347,167 @@ void PARAMETERS::Read_parameters(const unsigned int n_src)
     n_levels = 1;
   else
     n_levels = ceil(log(double(sn))/log(2.));
+}
+
+void PARAMETERS::Read_diffusion_parameters(const unsigned int n_src)
+{
+  // Type of cross section file
+  xs_type = regular_exs;
+
+  // Type of permutation
+  permutation_type = none;
+
+  // Angular multigrid cannot be used with diffusion
+  multigrid =false;
+
+  // Open the file to read it
+  ifstream parameters_file(parameters_filename->c_str(),ios::in);
+
+  // Check that the file was open properly
+  Check(parameters_file.good(),string ("Unable to open the file "+
+        *parameters_filename + " containing the parameters."));
+
+  string bottom_bc_type_str;
+  string left_bc_type_str;
+  string right_bc_type_str;
+  string top_bc_type_str;
+  string fe_type_str;
+  string mip_solver_type_str;
+
+  // Read the MIP solver type
+  parameters_file>>mip_solver_type_str;
+  if (mip_solver_type_str.compare("AGMG")==0 || 
+      mip_solver_type_str.compare("agmg")==0)
+    mip_solver_type = agmg;
+  else
+  {
+    if (mip_solver_type_str.compare("CG_ML")==0 || 
+        mip_solver_type_str.compare("cg_ml")==0)
+    {
+      string aggregation_type_str;
+      mip_solver_type = cg_ml;
+      // Read the aggregation type used
+      parameters_file>>aggregation_type_str;
+      if (aggregation_type_str.compare("Uncoupled")==0 ||
+          aggregation_type_str.compare("uncoupled")==0)
+        aggregation_type = uncoupled;
+      else
+      {
+        if (aggregation_type_str.compare("MIS")==0 ||
+            aggregation_type_str.compare("mis")==0)
+          aggregation_type = mis;
+        else
+          aggregation_type = uncoupled_mis;
+      }
+    }
+    else
+    {
+      if (mip_solver_type_str.compare("CG_SSOR")==0 || 
+          mip_solver_type_str.compare("cg_ssor")==0)
+      {
+
+        mip_solver_type = cg_ssor;
+        parameters_file>>damping_factor;
+      }
+      else
+        mip_solver_type = cg_none;
+    }
+  }
+
+  // Read the tolerance for the inner solver
+  parameters_file>>inner_tolerance;
+
+  // Read the tolerance for the outer solvers
+  parameters_file>>group_tolerance;
+  
+  // Read the maximum number of inner iterations
+  parameters_file>>max_inner_it;
+  
+  // Read the maximum number of group iterations
+  parameters_file>>max_group_it;
+
+  // Read the number of adaptive refinement to perform
+  parameters_file>>n_refinements;
+
+  // Reaf the threshold use for adaptive mesh refinement
+  parameters_file>>refinement_threshold;
+
+  // Read the verbosity of the code
+  parameters_file>>verbose;
+  
+  // Read the FEM type: BLD (Bilinear Discontinuous) of PWLD (PieceWise Linear
+  // Discontinuous)
+  parameters_file>>fe_type_str;
+  if (fe_type_str.compare("BLD")==0)
+    fe_type = bld;
+  else
+    fe_type = pwld;
+
+  // Read the values of the source
+  unsigned int n_groups(0);
+  parameters_file>>n_groups;
+  src.resize(n_src,d_vector (n_groups));
+  for (unsigned int i=0; i<n_src; ++i)
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>src[i][g];
+  
+  // Read the type of boundary condition on the bottom side
+  parameters_file>>bottom_bc_type_str;
+  if (bottom_bc_type_str.compare("vacuum")==0)
+    bottom_bc_type = vacuum;
+  else
+  {
+    Check(bottom_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the bottom boundary."));
+    bottom_bc_type = isotropic;
+    // Read bottom incoming flux
+    inc_bottom.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_bottom[g];
+  }
+  // Read the type of boundary condition on the right side
+  parameters_file>>right_bc_type_str;
+  if (right_bc_type_str.compare("vacuum")==0)
+    right_bc_type = vacuum;
+  else
+  {
+    Check(right_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the right boundary."));
+    right_bc_type = isotropic;
+    // Read right incoming flux
+    inc_right.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_right[g];
+  }
+  // Read the type of boundary condition on the top side
+  parameters_file>>top_bc_type_str;
+  if (top_bc_type_str.compare("vacuum")==0)
+    top_bc_type = vacuum;
+  else
+  {
+    Check(top_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the top boundary."));
+    top_bc_type = isotropic;
+    // Read right incoming flux
+    inc_top.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_top[g];
+  }
+  // Read the type of boundary condition on the left side
+  parameters_file>>left_bc_type_str;
+  if (left_bc_type_str.compare("vacuum")==0)
+    left_bc_type = vacuum;
+  else
+  {
+    Check(left_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the left boundary."));
+    left_bc_type = isotropic;
+    // Read right incoming flux
+    inc_left.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_left[g];
+  }
+
+  // Close the file
+  parameters_file.close();
 }

@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -79,6 +79,9 @@ class PARAMETERS
     /// Read the parameters input file.
     void Read_parameters(const unsigned int n_src);
 
+    /// Read the parameters input file when a diffusion problem is solved.
+    void Read_diffusion_parameters(const unsigned int n_src);
+
     /// Return the flag on the transport correction.
     bool Get_transport_correction() const;
 
@@ -113,6 +116,9 @@ class PARAMETERS
     /// Return the level of verbosity of the code.
     unsigned int Get_verbose() const;
 
+    /// Return the number of adaptive refinement to perform.
+    unsigned int Get_n_refinements() const;
+
     /// Return the relative tolerance for the inner solver.
     double Get_inner_tolerance() const;
 
@@ -120,16 +126,16 @@ class PARAMETERS
     double Get_group_tolerance() const;
 
     /// Return the incoming flux of the bottom boundary.
-    double Get_inc_bottom() const;
+    double Get_inc_bottom(unsigned int group) const;
 
     /// Return the incoming flux of the right boundary.
-    double Get_inc_right() const;
+    double Get_inc_right(unsigned int group) const;
 
     /// Return the incoming flux of the top boundary.
-    double Get_inc_top() const;
+    double Get_inc_top(unsigned int group) const;
 
     /// Return the incoming flux of the left boundary.
-    double Get_inc_left() const;
+    double Get_inc_left(unsigned int group) const;
 
     /// Return the intensity of the source i.
     d_vector Get_src(unsigned int i) const;
@@ -139,6 +145,9 @@ class PARAMETERS
 
     /// Return the damping factor used by SSOR.
     double Get_damping_factor() const;
+
+    /// Return the refinement threshold used in AMR.
+    double Get_refinement_threshold() const;
 
     /// Return the type of aggregation used by ML (uncoupled, mis or
     /// uncoupled-mis).
@@ -208,22 +217,19 @@ class PARAMETERS
     unsigned int n_levels;
     /// Level of verbosity of the code.
     unsigned int verbose;
+    /// Number of adaptive refinements to perform.
+    unsigned int n_refinements;
     /// Tolerance on the inner solver (SI or Krylov solver).
     double inner_tolerance;
     /// Tolerance on the outer solver for the groups and supergroups.
     double group_tolerance;
-    /// Bottom incoming flux.
-    double inc_bottom;
-    /// Right incoming flux.
-    double inc_right;
-    /// Top incoming flux.
-    double inc_top;
-    /// Left incoming flux.
-    double inc_left;
     /// Sum of the weights (1, 2pi or 4pi)
     double weight_sum;
     /// Damping factor used by SSOR.
     double damping_factor;
+    /// Threshold used for adaptive mesh refinement. The number has to be
+    /// between 0. and 1.
+    double refinement_threshold;
     /// Type of aggregation used by ML: uncoupled, mis or uncoupld-mis.
     AGGREGATION_TYPE aggregation_type;
     /// Type of boundary condition on the bottom side.
@@ -251,6 +257,14 @@ class PARAMETERS
     /// Pointer to the name of the input file containing the parameters of
     /// the problem.
     string* parameters_filename;
+    /// Bottom incoming flux.
+    d_vector inc_bottom;
+    /// Right incoming flux.
+    d_vector inc_right;
+    /// Top incoming flux.
+    d_vector inc_top;
+    /// Left incoming flux.
+    d_vector inc_left;
     /// Values of the source.
     vector<d_vector> src;
 };
@@ -309,6 +323,11 @@ inline unsigned int PARAMETERS::Get_verbose() const
 {
   return verbose;
 }
+    
+inline unsigned int PARAMETERS::Get_n_refinements() const
+{
+  return n_refinements;
+}
 
 inline double PARAMETERS::Get_inner_tolerance() const
 {
@@ -320,24 +339,24 @@ inline double PARAMETERS::Get_group_tolerance() const
   return group_tolerance;
 }
 
-inline double PARAMETERS::Get_inc_bottom() const
+inline double PARAMETERS::Get_inc_bottom(unsigned int group) const
 {
-  return inc_bottom;
+  return inc_bottom[group];
 }
 
-inline double PARAMETERS::Get_inc_right() const
+inline double PARAMETERS::Get_inc_right(unsigned int group) const
 {
-  return inc_right;
+  return inc_right[group];
 }
 
-inline double PARAMETERS::Get_inc_top() const
+inline double PARAMETERS::Get_inc_top(unsigned int group) const
 {
-  return inc_top;
+  return inc_top[group];
 }
 
-inline double PARAMETERS::Get_inc_left() const
+inline double PARAMETERS::Get_inc_left(unsigned int group) const
 {
-  return inc_left;
+  return inc_left[group];
 }
 
 inline d_vector PARAMETERS::Get_src(unsigned int i) const
@@ -353,6 +372,10 @@ inline double PARAMETERS::Get_weight_sum() const
 inline double PARAMETERS::Get_damping_factor() const
 {
   return damping_factor;
+}
+inline double PARAMETERS::Get_refinement_threshold() const
+{
+  return refinement_threshold;
 }
 
 inline AGGREGATION_TYPE PARAMETERS::Get_aggregation_type() const

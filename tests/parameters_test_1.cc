@@ -21,10 +21,6 @@ int main(int argc,char** argv)
   const double inner_tolerance(1e-8);
   const double group_tolerance(1e-6);
   const double weight_sum(4.*M_PI);
-  const double inc_bottom(1.);
-  const double inc_right(0.3);
-  const double inc_top(1.2);
-  const double inc_left(0.4);
   const BC_TYPE bottom_bc_type(most_normal);
   const BC_TYPE right_bc_type(isotropic);
   const BC_TYPE top_bc_type(isotropic);
@@ -33,6 +29,22 @@ int main(int argc,char** argv)
   const QUAD_TYPE quad_type(glc);
   const SOLVER_TYPE solver_type(si);
   const XS_TYPE xs_type(fp);
+  d_vector inc_bottom(n_groups,0.);
+  inc_bottom[0] = 1.0;
+  inc_bottom[1] = 0.5;
+  inc_bottom[2] = 0.25;
+  d_vector inc_right(n_groups,0.);
+  inc_right[0] = 0.3;
+  inc_right[1] = 0.15;
+  inc_right[2] = 0.075;
+  d_vector inc_top(n_groups,0.);
+  inc_top[0] = 1.2;
+  inc_top[1] = 0.6;
+  inc_top[2] = 0.3;
+  d_vector inc_left(n_groups,0.);
+  inc_left[0] = 0.4;
+  inc_left[1] = 0.2;
+  inc_left[2] = 0.1;
   vector<d_vector> src(n_src,d_vector (n_groups,0.));
   src[0][0] = 0.;
   src[0][1] = 0.5;
@@ -96,10 +108,13 @@ int main(int argc,char** argv)
   assert(left_bc_type==param.Get_left_bc_type());
 
   // Check the incoming fluxes
-  assert(inc_bottom==param.Get_inc_bottom());
-  assert(inc_right==param.Get_inc_right());
-  assert(inc_top==param.Get_inc_top());
-  assert(inc_left==param.Get_inc_left());
+  for (unsigned int g=0; g<n_groups; ++g)
+  {
+    assert(inc_bottom[g]==param.Get_inc_bottom(g));
+    assert(inc_right[g]==param.Get_inc_right(g));
+    assert(inc_top[g]==param.Get_inc_top(g));
+    assert(inc_left[g]==param.Get_inc_left(g));
+  }
 
   return 0;
 }

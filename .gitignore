@@ -43,7 +43,8 @@ glc_test
 ls_test
 *.inp
 cell_test
-mip_test
+mip_diffusion_test
+mip_dsa_test
 dof_handler_test
 edge_test
 transport_operator_test_1
@@ -55,3 +56,4 @@ cross_sections_fp_test_2
 cross_sections_regular_test_1
 cross_sections_regular_test_2
 cross_sections_cepxs_test
+parameters_diffusion_test

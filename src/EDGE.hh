@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -108,7 +108,7 @@ class EDGE
     /// Get the jth component of the normal in the ith component of #exterior_normal.
     double Get_exterior_normal_component(unsigned int i,unsigned int j) const;
 
-  private :
+ // private :
     /// Flag to know if the edge is inside the medium, on the bottom boundary, on the
     /// the right boundary, on the top boundary or on the left boundary.
     EDGE_TYPE edge_type;

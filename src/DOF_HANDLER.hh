@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -100,6 +100,9 @@ class DOF_HANDLER
 
     /// Return a pointer to a cell.
     CELL* Get_cell(unsigned int i);
+
+    /// Return a pointer to the triangulation associated to the dof_handler.
+    TRIANGULATION const *const Get_triangulation() const;
 
     /// Return the begin iterator of the mesh vector.
     vector<CELL*>::iterator Get_mesh_begin();
@@ -211,6 +214,11 @@ inline ui_vector const* const DOF_HANDLER::Get_sweep_order(unsigned int q,
 inline CELL* DOF_HANDLER::Get_cell(unsigned int i) 
 {
   return mesh[i];
+}
+    
+inline TRIANGULATION const *const DOF_HANDLER::Get_triangulation() const
+{
+  return triangulation;
 }
 
 inline vector<CELL*>::iterator DOF_HANDLER::Get_mesh_begin() 

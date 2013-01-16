@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -18,7 +18,7 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _MIP_HH_
-#define _MIP_HH
+#define _MIP_HH_
 
 #include <cmath>
 #include <iostream>
@@ -38,6 +38,7 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 #include "Teuchos_SerialDenseVector.hpp"
 #include "CELL.hh"
 #include "EDGE.hh"
+#include "ERROR_ESTIMATOR.hh"
 #include "EXCEPTION.hh"
 #include "DOF_HANDLER.hh"
 #include "FINITE_ELEMENT.hh"
@@ -81,8 +82,8 @@ extern "C"
 class MIP
 {
   public :
-    MIP(unsigned int level,DOF_HANDLER* dof,PARAMETERS const* param,
-        QUADRATURE const* quad,Epetra_Comm const* comm);
+    MIP(Epetra_Comm const* comm,PARAMETERS const* param,DOF_HANDLER* dof,
+        QUADRATURE const* quad=NULL,unsigned int level=0);
 
     ~MIP();
 
@@ -93,8 +94,13 @@ class MIP
     /// preconditioner for CG.
     void Set_group(unsigned int g);
 
-    /// Solve the MIP equation and add the solution to the flux moments.
-    void Solve(Epetra_MultiVector &flux_moments);
+    /// Solve the MIP equations and add the solution to the flux moments.
+    void Solve(Epetra_MultiVector &flux_moments,
+        Epetra_MultiVector* initial_guess=NULL);
+
+    /// Solve the multigroup MIP equations when MIP is used alone.
+    void Solve_diffusion(const unsigned int n_groups,Epetra_MultiVector &flux_moments,
+        Epetra_MultiVector const &group_flux,Epetra_MultiVector* initial_guess=NULL);
 
     /// Return the time needed to build the matrix.
     double Get_building_mip_time() const;
@@ -110,8 +116,13 @@ class MIP
     /// Compute the number of non-zero elements for each row of #A.
     void Compute_n_entries_per_row(int* n);
 
-    /// Compute the right-hand side of the MIP equation.
+    /// Compute the right-hand side of the MIP equations.
     void Compute_rhs(Epetra_MultiVector const &x,Epetra_MultiVector &b);
+
+    /// Compute the right-hand side of the multigroup MIP equations when MIP
+    /// is used.
+    void Compute_diffusion_rhs(const unsigned int ngroups,Epetra_MultiVector const &x,
+        Epetra_MultiVector &b);
 
     /// Build the CRS matrix of the MIP that will be used by CG and the
     /// algebraic multigrid method.
@@ -123,11 +134,13 @@ class MIP
 
     /// Solve the system of equation using non-preconditioned Conjuguate
     /// Gradient.
-    void Cg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
+    void Cg_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+        Epetra_MultiVector &b,Epetra_MultiVector* initial_guess);
 
     /// Solve the system of equation using Conjuguate Gradient preconditioned
     /// using SSOR.
-    void Cg_ssor_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
+    void Cg_ssor_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+        Epetra_MultiVector &b,Epetra_MultiVector* initial_guess);
 
     /**
      * Solve the system of equation using Conjuguate Gradient preconditioned
@@ -147,11 +160,13 @@ class MIP
      *  - "coarse: type" = "Amesos-KLU"
      *  - "coarse: max size" = 128
      */
-    void Cg_ml_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
+    void Cg_ml_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+        Epetra_MultiVector &b,Epetra_MultiVector* initial_guess);
 
 #ifdef AGMG
     /// Solve the system of equation using AGMG.
-    void Agmg_solve(Epetra_MultiVector &flux_moments,Epetra_MultiVector &b);
+    void Agmg_solve(const bool dsa,Epetra_MultiVector &flux_moments,
+        Epetra_MultiVector &b,Epetra_MultiVector* initial_guess);
 #endif
 
     /// Add the solution to the 0th angular flux moment if the transport is

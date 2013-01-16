@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -177,7 +177,6 @@ void TRANSPORT_SOLVER::Solve()
   double solve_mip_time(0.);
   const double inner_tol(parameters.Get_inner_tolerance());
   const double group_tol(parameters.Get_group_tolerance());
-  // Compute rhs
   if (parameters.Get_multigrid()==true)
   {
     const unsigned int lvl(0);
@@ -246,9 +245,9 @@ void TRANSPORT_SOLVER::Solve()
           if (parameters.Get_verbose()>0)
           cout<<"Convergence over the supergroup "<<i<<" at iteration "<<
             supergroup_iter<<": "<<supergroup_conv<<endl;
+          ++supergroup_iter;
           if (supergroup_iter>=max_supergroup_it)
             break;
-          ++supergroup_iter;
         }
         // Store the new supergroup_flux
         for (unsigned int j=0; j<supergroup; ++j)
@@ -261,9 +260,9 @@ void TRANSPORT_SOLVER::Solve()
       group_conv = Compute_convergence(*group_flux,old_group_flux,n_groups);
       cout<<"Convergence over all groups at iteration "<<group_iter<<": "<<
         group_conv<<endl;
+      ++group_iter;
       if (group_iter>=max_group_it)
         break;
-      ++group_iter;
     }
 
     // Apply the preconditioner to get the solution
@@ -353,9 +352,9 @@ void TRANSPORT_SOLVER::Solve()
             if (parameters.Get_verbose()>0)
               cout<<"Convergence over the supergroup "<<i<<" at iteration "<<
                 supergroup_iter<<": "<<supergroup_conv<<endl;
+            ++supergroup_iter;
             if (supergroup_iter>=max_supergroup_it)
               break;
-            ++supergroup_iter;
           }
           // Store the new supergroup_flux
           for (unsigned int j=0; j<supergroup; ++j)
@@ -368,9 +367,9 @@ void TRANSPORT_SOLVER::Solve()
         group_conv = Compute_convergence(*group_flux,old_group_flux,n_groups);
         cout<<"Convergence over all groups at iteration "<<group_iter<<": "<<
           group_conv<<endl;
+        ++group_iter;
         if (group_iter>=max_group_it)
           break;
-        ++group_iter;
       }
       // Apply the preconditioner to get the solution
       if (parameters.Get_mip()==true)
@@ -448,8 +447,8 @@ void TRANSPORT_SOLVER::Solve()
                 blas.AXPY(flux_moments_size,-1.,flux_moments_old.Values(),
                     diff_flux.Values());
 
-                assert(diff_flux.Norm2(&num)==0);
-                assert(flux_moments.Norm2(&denom)==0);
+                Check(diff_flux.Norm2(&num)!=0,string ("Difference of flux between two SI iterations is 0."));
+                Check(flux_moments.Norm2(&denom)!=0,string ("Flux moments after the SI iteration is 0."));
                 double convergence(num/denom);
                 if (parameters.Get_verbose()>1)
                   cout<<"Convergence at iteration "<<i<<": "<<convergence<<endl;
@@ -469,9 +468,9 @@ void TRANSPORT_SOLVER::Solve()
             if (parameters.Get_verbose()>0)
               cout<<"Convergence over the supergroup "<<i<<" at iteration "<<
                 supergroup_iter<<": "<<supergroup_conv<<endl;
+            ++supergroup_iter;
             if (supergroup_iter>=max_supergroup_it)
               break;
-            ++supergroup_iter;
           }
           // Store the new supergroup_flux
           for (unsigned int j=0; j<supergroup; ++j)
@@ -484,9 +483,9 @@ void TRANSPORT_SOLVER::Solve()
         group_conv = Compute_convergence(*group_flux,old_group_flux,n_groups);
         cout<<"Convergence over all groups at iteration "<<group_iter<<": "<<
           group_conv<<endl;
+        ++group_iter;
         if (group_iter>=max_group_it)
           break;
-        ++group_iter;
       }
       if (parameters.Get_mip()==true)
       {
@@ -589,8 +588,9 @@ void TRANSPORT_SOLVER::Write_in_file()
       file<<(*group_flux)[g][i]<<"\n";
 
   // To have the scalar flux phi_00 needs to be multiply by sqrt(weight_sum)
-  for (unsigned int i=0; i<n_dof; ++i)
-    file<<(*group_flux)[0][i]*sqrt(weight_sum)<<"\n";
+  for (unsigned int g=0; g<n_groups; ++g)
+    for (unsigned int i=0; i<n_dof; ++i)
+      file<<(*group_flux)[g][i]*sqrt(weight_sum)<<"\n";
 
   // If sigma_e is given, the dose is output
   if (cross_sections.Sigma_e_exist()==false)

@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -53,7 +53,7 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
     (quad->Get_n_mom(),Teuchos::SerialDenseVector<int,double> 
      (dof_handler->Get_n_dof()));
   if (param->Get_mip()==true)
-    precond = new MIP (0,dof,param,quad,comm);
+    precond = new MIP (comm,param,dof,quad);
 }
 
 TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
@@ -85,7 +85,7 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
     (quad->Get_n_mom(),Teuchos::SerialDenseVector<int,double> 
      (dof_handler->Get_n_dof()));
   if (lvl==0)
-    precond = new MIP (max_lvl,dof,param,quad,comm);
+    precond = new MIP (comm,param,dof,quad,max_lvl);
 }
 
 TRANSPORT_OPERATOR::~TRANSPORT_OPERATOR()
@@ -275,7 +275,7 @@ void TRANSPORT_OPERATOR::Compute_outer_scattering_source(
           x_cell.values()[j] = (*group_flux)[g][i*n_dof+j+offset];
         blas.GEMV(Teuchos::NO_TRANS,dof_per_cell,dof_per_cell,
             cell.Get_sigma_s(g,group,lvl,quad->Get_l(i)),mass_matrix->values(),
-            mass_matrix->stride(),x_cell.values(),1,0.,scat_src_cell->values(),1);
+            mass_matrix->stride(),x_cell.values(),1,1.,scat_src_cell->values(),1);
         for (unsigned int j=0; j<dof_per_cell; ++j)
           b.values()[j] += m2d*scat_src_cell->values()[j];
       }
@@ -406,28 +406,28 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,
                 if ((((*cell_edge)->Get_bc_type()==most_normal) &&
                       (dof_handler->Is_most_normal_bottom(lvl,idir))) ||
                     ((*cell_edge)->Get_bc_type()==isotropic))
-                  inc_flux_norm = param->Get_inc_bottom();
+                  inc_flux_norm = param->Get_inc_bottom(group);
               }
               if ((*cell_edge)->Get_edge_type()==right_boundary) 
               {
                 if ((((*cell_edge)->Get_bc_type()==most_normal) &&
                       (dof_handler->Is_most_normal_right(lvl,idir))) ||
                     ((*cell_edge)->Get_bc_type()==isotropic))
-                  inc_flux_norm = param->Get_inc_right();
+                  inc_flux_norm = param->Get_inc_right(group);
               }
               if ((*cell_edge)->Get_edge_type()==top_boundary) 
               {
                 if ((((*cell_edge)->Get_bc_type()==most_normal) &&
                       (dof_handler->Is_most_normal_top(lvl,idir))) ||
                     ((*cell_edge)->Get_bc_type()==isotropic))
-                  inc_flux_norm = param->Get_inc_top();
+                  inc_flux_norm = param->Get_inc_top(group);
               }
               if ((*cell_edge)->Get_edge_type()==left_boundary) 
               {
                 if ((((*cell_edge)->Get_bc_type()==most_normal) &&
                       (dof_handler->Is_most_normal_left(lvl,idir))) ||
                     ((*cell_edge)->Get_bc_type()==isotropic))
-                  inc_flux_norm = param->Get_inc_left();
+                  inc_flux_norm = param->Get_inc_left(group);
               }
               inc_flux_norm /= param->Get_weight_sum();
               Teuchos::SerialDenseVector<int,double> inc_flux(dof_per_cell);

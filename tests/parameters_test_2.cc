@@ -18,7 +18,6 @@ int main(int argc,char** argv)
   const double inner_tolerance(1e-10);
   const double group_tolerance(1e-8);
   const double weight_sum(2.*M_PI);
-  const double inc_bottom(10.);
   const BC_TYPE bottom_bc_type(most_normal);
   const BC_TYPE right_bc_type(reflective);
   const BC_TYPE top_bc_type(vacuum);
@@ -26,6 +25,10 @@ int main(int argc,char** argv)
   const FE_TYPE fe_type(pwld);
   const QUAD_TYPE quad_type(ls);
   const SOLVER_TYPE solver_type(gmres);
+  d_vector inc_bottom(n_groups,0.);
+  inc_bottom[0] = 10.;
+  inc_bottom[1] = 5.;
+  inc_bottom[2] = 2.5;
   vector<d_vector> src(n_src,d_vector (n_groups,0.));
   src[0][0] = 1.2;
   src[0][1] = 3.2;
@@ -62,7 +65,8 @@ int main(int argc,char** argv)
   assert(left_bc_type==param.Get_left_bc_type());
   
   // Check the incoming flux
-  assert(inc_bottom==param.Get_inc_bottom());
+  for (unsigned int g=0; g<n_groups; ++g)
+    assert(inc_bottom[g]==param.Get_inc_bottom(g));
 
   // Check the intensity of the source
   for (unsigned int i=0; i<n_src; ++i)

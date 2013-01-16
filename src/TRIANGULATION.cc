@@ -3,7 +3,7 @@ Copyright (c) 2012, Bruno Turcksin.
 
 This file is part of Janus.
 
-Janu is free software: you can redistribute it and/or modify
+Janus is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 he Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -93,7 +93,7 @@ void TRIANGULATION::Read_geometry()
     unsigned int x_pos(0),y_pos(0);
     for (unsigned int i=0; i<n_cells; ++i) 
     {
-      vector<d_vector> rectangle(4,d_vector(dim,0.));
+      vector<d_vector> rectangle(4,d_vector(dim+1,0.));
       if (i%n_x_cells==0 && i!=0)
       {
         x_pos = 0;
@@ -132,7 +132,7 @@ void TRIANGULATION::Read_geometry()
       vector<d_vector> polygon(n_vert_polygon);
       for (unsigned int vert=0; vert<n_vert_polygon; ++vert)
       {
-        d_vector coord(dim,0.);
+        d_vector coord(dim+1,0.);
         for (unsigned int i=0; i<dim; ++i)
           geometry_file>>coord[i];
         if (coord[0]<left_value)
@@ -167,8 +167,8 @@ void TRIANGULATION::Build_edges()
     // Loop over the vertices of the cell.
     for (unsigned int vertex=0; vertex<n_vertices[i]; ++vertex)
     {
-      d_vector vertex_0(dim,0.);
-      d_vector vertex_1(dim,0.);
+      d_vector vertex_0(dim+1,0.);
+      d_vector vertex_1(dim+1,0.);
       if (vertex!=n_vertices[i]-1)
       {
         vertex_0 = grid[i][vertex];
@@ -224,6 +224,17 @@ void TRIANGULATION::Build_edges()
           {
             edges[min_v_it->second].Set_cell_index(1,i);
             cell_to_edge_gid[i].push_back(edges[min_v_it->second].Get_gid());
+            if ((edges[min_v_it->second].vertex_0[0]==vertex_0[0]) &&
+                (edges[min_v_it->second].vertex_0[1]==vertex_0[1]))
+            {
+              edges[min_v_it->second].vertex_0.push_back(vertex_0[2]);
+              edges[min_v_it->second].vertex_1.push_back(vertex_1[2]);
+            }
+            else
+            {
+              edges[min_v_it->second].vertex_1.push_back(vertex_0[2]);
+              edges[min_v_it->second].vertex_0.push_back(vertex_1[2]);
+            }
             edge_exist = true;
             break;
           }
@@ -292,4 +303,288 @@ EDGE_TYPE TRIANGULATION::Get_edge_type(d_vector const &vertex_0,
   }
   
   return edge_type;
+}
+
+void TRIANGULATION::Refine_mesh(ui_set const &cells_to_refine,
+    ui_set const &adjacent_cells,
+    map<unsigned int,vector<vector<d_vector> > > &edge_to_refine,
+    vector<ui_vector> &projection)
+{
+  unsigned int new_n_cells(0);
+  unsigned int dof(0);
+  vector<vector<d_vector> > coarsest_vertices(n_cells);
+  ui_vector new_mat_id,new_src_id,new_n_vertices;
+  ui_vector tmp_n_vertices(n_cells);
+  vector<ui_vector> tmp_projection;
+  vector<vector<d_vector> > new_grid;
+  // Loop over the old cells
+  for (unsigned int i=0; i<n_cells; ++i)
+  {
+    if (adjacent_cells.count(i)!=0)
+    {
+      // An adjacent cell is refined 
+      unsigned int v(0);
+      vector<d_vector> polygon;
+      for (unsigned int j=0; j<n_vertices[i]; ++j)
+      {
+        // Add n existing vertex to the temporary cell
+        d_vector vertex_0(grid[i][j]);
+        d_vector vertex_1(grid[i][(j+1)%n_vertices[i]]);
+        polygon.push_back(vertex_0);
+        tmp_projection.push_back(ui_vector (1,dof));
+        ++v;
+        // If necessary create and add a new vertex to the temporary cell
+        for (unsigned int k=0; k<edge_to_refine[i].size(); ++k)
+        {
+          if ((((vertex_0[0]==edge_to_refine[i][k][0][0]) && 
+                (vertex_0[1]==edge_to_refine[i][k][0][1])) || 
+               ((vertex_0[0]==edge_to_refine[i][k][1][0]) &&
+                (vertex_0[1]==edge_to_refine[i][k][1][1]))) &&
+              (((vertex_1[0]==edge_to_refine[i][k][0][0]) && 
+                (vertex_1[1]==edge_to_refine[i][k][0][1])) || 
+               ((vertex_1[0]==edge_to_refine[i][k][1][0]) &&
+                (vertex_1[1]==edge_to_refine[i][k][1][1]))))
+          {
+            ui_vector dofs(2,0);
+            d_vector new_vertex(3,1.);
+            if (j!=n_vertices[i]-1)
+            {
+              new_vertex[0] = 0.5*(grid[i][j][0]+grid[i][j+1][0]);
+              new_vertex[1] = 0.5*(grid[i][j][1]+grid[i][j+1][1]);
+              dofs[0] = dof;
+              dofs[1] = dof+1;
+            }
+            else
+            {
+              new_vertex[0] = 0.5*(grid[i][j][0]+grid[i][0][0]);
+              new_vertex[1] = 0.5*(grid[i][j][1]+grid[i][0][1]);
+              dofs[0] = dof;
+              dofs[1] = dof-(n_vertices[i]-1);
+            }
+            polygon.push_back(new_vertex);
+            tmp_projection.push_back(dofs);
+            ++v;
+          }
+        }
+        ++dof;
+      }
+      grid[i] = polygon;
+      tmp_n_vertices[i] = v;
+    }
+    else
+    {
+      for (unsigned int j=0; j<n_vertices[i]; ++j)
+      {
+        tmp_projection.push_back(ui_vector(1,dof));
+        ++dof;
+      }
+      tmp_n_vertices[i] = n_vertices[i];
+    }
+  }
+        
+  // Loop over the temporary cells
+  dof = 0;
+  unsigned int dof2(0);
+  for (unsigned int i=0; i<n_cells; ++i)
+  {
+    if (cells_to_refine.count(i)==0)
+    {
+      if (adjacent_cells.count(i)==0)
+      {
+        new_n_vertices.push_back(n_vertices[i]);
+        for (unsigned int j=0; j<n_vertices[i]; ++j)
+          projection.push_back(ui_vector(1,dof2+j));
+      }
+      else
+      {
+        new_n_vertices.push_back(tmp_n_vertices[i]);
+        for (unsigned int j=0; j<tmp_n_vertices[i]; ++j)
+          projection.push_back(tmp_projection[dof+j]);
+      }
+      // If the cell is unchanged, we just add it to the new grid
+      new_grid.push_back(grid[i]);
+      dof += tmp_n_vertices[i];
+      dof2 += n_vertices[i];
+      new_mat_id.push_back(mat_id[i]);
+      new_src_id.push_back(src_id[i]);
+      ++new_n_cells;
+    }
+    else
+    {
+      // The cell needs to be refined
+      unsigned int n_old_vertices(grid[i].size());
+      unsigned int n_coarser_vertices(0);
+      double n_coarsest_vertices(0.);
+      d_vector center(3,0.);
+      vector<d_vector> coarse_vertices;
+      // Extract the coarsest vertices
+      for (unsigned int j=0; j<tmp_n_vertices[i]; ++j)
+      {
+        d_vector vertex(3,0.);
+        vertex[0] = grid[i][j][0];
+        vertex[1] = grid[i][j][1];
+        coarsest_vertices[i].push_back(vertex);
+        if (grid[i][j][2]==0.)
+        {
+          d_vector new_vertex(3,0.);
+          coarse_vertices.push_back(new_vertex);
+          coarse_vertices.push_back(vertex);
+          center[0] += grid[i][j][0];
+          center[1] += grid[i][j][1];
+          n_coarsest_vertices += 1.;
+        }
+      }
+      center[0] /= n_coarsest_vertices;
+      center[1] /= n_coarsest_vertices;
+      n_coarser_vertices = 2*(unsigned int)n_coarsest_vertices;
+
+      // Add the new coarser vertices
+      for (unsigned int j=1; j<n_coarser_vertices; j+=2)
+      {
+        if (j==1)
+        {
+          coarse_vertices[j-1][0] += 0.5*(coarse_vertices[j][0]+
+              coarse_vertices[n_coarser_vertices-1][0]);
+          coarse_vertices[j-1][1] += 0.5*(coarse_vertices[j][1]+
+              coarse_vertices[n_coarser_vertices-1][1]);
+        }
+        else
+        {
+          coarse_vertices[j-1][0] += 0.5*(coarse_vertices[j][0]+
+              coarse_vertices[j-2][0]);
+          coarse_vertices[j-1][1] += 0.5*(coarse_vertices[j][1]+
+              coarse_vertices[j-2][1]);
+        }
+      }
+
+      for (unsigned int j=0; j<n_coarser_vertices; j+=2)
+      {
+        unsigned int pos(0);
+        unsigned int jm1(j-1);
+        ui_vector dofs(2,0);
+        if (j==0)
+          jm1 = n_coarser_vertices-1;
+        d_vector vertex(3,0.);
+        vector<d_vector> polygon;
+        // Add the first coarse vertex of the new cell
+        vertex[0] = coarse_vertices[j][0];
+        vertex[1] = coarse_vertices[j][1];
+        polygon.push_back(vertex);
+        // Find the previous coarsest vertex 
+        while ((grid[i][pos][0]!=coarse_vertices[jm1][0]) || 
+            (grid[i][pos][1]!=coarse_vertices[jm1][1]))
+          pos = (pos+1)%n_old_vertices;
+        // Move to the next vertex
+        pos = (pos+1)%n_old_vertices;
+        // If the next vertex is not a coarse vertex, we move to the new
+        // coarse vertex
+        if (grid[i][pos][2]!=0.)
+        {
+          while ((grid[i][pos][0]!=coarse_vertices[j][0]) && 
+              (grid[i][pos][1]!=coarse_vertices[j][1]))
+            pos = (pos+1)%n_old_vertices;
+          projection.push_back(tmp_projection[dof+pos]);
+          pos = (pos+1)%n_old_vertices;
+        }
+        else
+        {
+          Project(i,dof2,pos,n_old_vertices,vertex,projection,coarsest_vertices);
+          pos = (pos+1)%n_old_vertices;
+        }
+
+        // Add the new vertices to the new cell
+        while ((grid[i][pos][0]!=coarse_vertices[j+1][0]) &&
+            (grid[i][pos][1]!=coarse_vertices[j+1][1]))
+        {
+          polygon.push_back(grid[i][pos]);
+          projection.push_back(tmp_projection[dof+pos]);
+          pos = (pos+1)%n_old_vertices;
+        }
+                                            
+        // Add a new coarse vertex
+        vertex[0] = coarse_vertices[j+1][0];
+        vertex[1] = coarse_vertices[j+1][1];
+        polygon.push_back(vertex);
+        Project(i,dof2,pos,n_old_vertices,vertex,projection,coarsest_vertices);
+        pos = (pos+1)%n_old_vertices;
+
+        // Add the new vertices to the new cell
+        while ((grid[i][pos][0]!=coarse_vertices[j+1][0]) &&
+            (grid[i][pos][1]!=coarse_vertices[j+1][1]))
+        {
+          polygon.push_back(grid[i][pos]);
+          projection.push_back(tmp_projection[dof+pos]);
+          pos = (pos+1)%n_old_vertices;
+        }
+
+        // Add a new coarse vertex
+        if (j!=n_coarser_vertices-2)
+        {
+          vertex[0] = coarse_vertices[j+2][0];
+          vertex[1] = coarse_vertices[j+2][1];
+        }
+        else
+        {
+          vertex[0] = coarse_vertices[0][0];
+          vertex[1] = coarse_vertices[0][1];
+        }
+        polygon.push_back(vertex);
+        Project(i,dof2,pos,n_old_vertices,vertex,projection,coarsest_vertices);
+        pos = (pos+1)%n_old_vertices;
+        // Add the center of the cell
+        polygon.push_back(center);
+        new_grid.push_back(polygon);
+        new_n_vertices.push_back(polygon.size());
+        dofs.clear();
+        for (unsigned int k=0; k<n_vertices[i]; ++k)
+        {
+          for (unsigned int l=0; l<tmp_projection[dof+k].size(); ++l)
+          {
+            ui_vector::iterator it(find(dofs.begin(),dofs.end(),
+                    tmp_projection[dof+k][l]));
+            if (it==dofs.end())
+              dofs.push_back(tmp_projection[dof+k][l]);
+          }
+        }
+        projection.push_back(dofs);
+        pos = (pos+1)%n_old_vertices;
+        new_mat_id.push_back(mat_id[i]);
+        new_src_id.push_back(src_id[i]);
+        ++new_n_cells;
+      }
+      dof += tmp_n_vertices[i];
+      dof2 += n_vertices[i];
+    }
+  }
+  grid = new_grid;
+  n_vertices = new_n_vertices;
+  mat_id = new_mat_id;
+  src_id = new_src_id;
+  n_cells = new_n_cells;
+  edges.clear();
+  cell_to_edge_gid.clear();
+}
+
+void TRIANGULATION::Project(unsigned int i,unsigned int dof,unsigned int &pos,
+    unsigned int n_old_vertices,d_vector const &vertex,vector<ui_vector> &projection,
+    vector<vector<d_vector> > const &coarsest_vertices)
+{
+  bool is_coarsest(false);
+  for (unsigned int c=0; c<coarsest_vertices[i].size(); ++c)
+    if ((coarsest_vertices[i][c][0]==vertex[0]) && 
+        (coarsest_vertices[i][c][1]==vertex[1]))
+      is_coarsest = true;
+  if (is_coarsest==false)
+  {
+    ui_vector dofs(2,dof);
+    if (pos!=0)
+      dofs[0] += pos-1;
+    else
+      dofs[0] += n_old_vertices-1;
+    dofs[1] += pos; 
+    --pos;
+    projection.push_back(dofs);
+  }
+  else
+    projection.push_back(ui_vector(1,dof+pos));
 }
