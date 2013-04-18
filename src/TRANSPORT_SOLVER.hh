@@ -20,6 +20,7 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _TRANSPORT_SOLVER_HH_
 #define _TRANSPORT_SOLVER_HH_
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <string>
@@ -62,7 +63,7 @@ class TRANSPORT_SOLVER
 
     /// Write the mesh and the solution in a file. Assume linear finite
     /// elements.
-    void Write_in_file();
+    void Write_in_file() const;
 
   private :
     /// Compute the convergence over a supergroup or over all the groups.

@@ -30,6 +30,7 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include "mpi.h"
 #include "Epetra_MpiComm.h"
+#include "Epetra_MultiVector.h"
 #include "DIFFUSION_SOLVER.hh"
 #include "EXCEPTION.hh"
 #include "TRANSPORT_SOLVER.hh"
@@ -50,7 +51,7 @@ int main(int argc,char** argv)
     MPI_Init(&argc,&argv);
     Epetra_MpiComm comm(MPI_COMM_WORLD);
 
-    if (strcmp(argv[1],"--t")==0)
+    if (strcmp(argv[1],"-t")==0)
     {
       cout<<"Initialization"<<endl;
       TRANSPORT_SOLVER transport_solver(&geometry_filename,&parameters_filename,
@@ -64,7 +65,7 @@ int main(int argc,char** argv)
     }
     else
     {
-      Check(strcmp(argv[1],"--d")==0,string ("Unknown option: only options available are --t and --d."));
+      Check(strcmp(argv[1],"-d")==0,string ("Unknown option: only options available are --t and --d."));
       cout<<"Initialization"<<endl;
       DIFFUSION_SOLVER diffusion_solver(&geometry_filename,&parameters_filename,
           &cross_sections_filename,&output_filename,&comm);

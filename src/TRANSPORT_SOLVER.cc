@@ -236,8 +236,10 @@ void TRANSPORT_SOLVER::Solve()
             solver.Iterate(parameters.Get_max_inner_it(),inner_tol);
 
             // Store the new flux_moments
-            old_supergroup_flux[j] = supergroup_flux[j];
-            supergroup_flux[j] = flux_moments[0];
+            copy(supergroup_flux[j],supergroup_flux[j]+flux_moments_size,
+                old_supergroup_flux[j]);
+            copy(flux_moments[0],flux_moments[0]+flux_moments_size,
+                supergroup_flux[j]);
           }
           // Compute the convergence of the supergroup
           supergroup_conv = Compute_convergence(supergroup_flux,
@@ -252,8 +254,10 @@ void TRANSPORT_SOLVER::Solve()
         // Store the new supergroup_flux
         for (unsigned int j=0; j<supergroup; ++j)
         {
-          old_group_flux[i*supergroup+j] = (*group_flux)[i*supergroup+j];
-          (*group_flux)[i*supergroup+j] = supergroup_flux[j];
+          copy((*group_flux)[i*supergroup+j],(*group_flux)[i*supergroup+j]+
+              flux_moments_size,old_group_flux[i*supergroup+j]);
+          copy(supergroup_flux[i*supergroup+j],supergroup_flux[i*supergroup+j]+
+              flux_moments_size,(*group_flux)[i*supergroup+j]);
         }
       }
       // Compute the convergence over all the groups
@@ -272,7 +276,7 @@ void TRANSPORT_SOLVER::Solve()
       tmp[0] = (*group_flux)[g];
       transport_operator.Set_group(g);
       transport_operator.Apply_preconditioner(tmp);
-      (*group_flux)[g] = tmp[0];
+      copy(tmp[0],tmp[0]+flux_moments_size,(*group_flux)[g]);
     }
     
     // Get the elapsed times
@@ -343,8 +347,10 @@ void TRANSPORT_SOLVER::Solve()
               solver.Iterate(parameters.Get_max_inner_it(),inner_tol);
 
               // Store the new flux_moments
-              old_supergroup_flux[j] = supergroup_flux[j];
-              supergroup_flux[j] = flux_moments[0];
+              copy(supergroup_flux[j],supergroup_flux[j]+flux_moments_size,
+                  old_supergroup_flux[j]);
+              copy(flux_moments[0],flux_moments[0]+flux_moments_size,
+                  supergroup_flux[j]);
             }
             // Compute the convergence of the supergroup
             supergroup_conv = Compute_convergence(supergroup_flux,old_supergroup_flux,
@@ -359,8 +365,10 @@ void TRANSPORT_SOLVER::Solve()
           // Store the new supergroup_flux
           for (unsigned int j=0; j<supergroup; ++j)
           {
-            old_group_flux[i*supergroup+j] = (*group_flux)[i*supergroup+j];
-            (*group_flux)[i*supergroup+j] = supergroup_flux[j];
+            copy((*group_flux)[i*supergroup+j],(*group_flux)[i*supergroup+j]+
+                flux_moments_size,old_group_flux[i*supergroup+j]);
+            copy(supergroup_flux[j],supergroup_flux[j]+flux_moments_size,
+                (*group_flux)[i*supergroup+j]);
           }
         }
         // Compute the convergence over all the groups
@@ -381,7 +389,7 @@ void TRANSPORT_SOLVER::Solve()
           tmp[0] = (*group_flux)[g];
           mip->Set_group(g);
           mip->Solve(tmp);
-          (*group_flux)[g] = tmp[0];
+          copy(tmp[0],tmp[0]+flux_moments_size,(*group_flux)[g]);
         }
         building_mip_time = mip->Get_building_mip_time();
         solve_mip_time = mip->Get_solve_mip_time();
@@ -459,8 +467,10 @@ void TRANSPORT_SOLVER::Solve()
               }
 
               // Store the new flux_moments
-              old_supergroup_flux[j] = supergroup_flux[j];
-              supergroup_flux[j] = flux_moments[0];
+              copy(supergroup_flux[j],supergroup_flux[j]+flux_moments_size,
+                  old_supergroup_flux[j]);
+              copy(flux_moments[0],flux_moments[0]+flux_moments_size,
+                  supergroup_flux[j]);
             }
             // Compute the convergence of the supergroup
             supergroup_conv = Compute_convergence(supergroup_flux,
@@ -475,8 +485,10 @@ void TRANSPORT_SOLVER::Solve()
           // Store the new supergroup_flux
           for (unsigned int j=0; j<supergroup; ++j)
           {
-            old_group_flux[i*supergroup+j] = (*group_flux)[i*supergroup+j];
-            (*group_flux)[i*supergroup+j] = supergroup_flux[j];
+            copy((*group_flux)[i*supergroup+j],(*group_flux)[i*supergroup+j]+
+                flux_moments_size,old_group_flux[i*supergroup+j]);
+            copy(supergroup_flux[j],supergroup_flux[j]+flux_moments_size,
+                (*group_flux)[i*supergroup+j]);
           }
         }
         // Compute the convergence over all the groups
@@ -537,7 +549,7 @@ double TRANSPORT_SOLVER::Compute_convergence(Epetra_MultiVector const &flux,
   return conv;
 }
 
-void TRANSPORT_SOLVER::Write_in_file()
+void TRANSPORT_SOLVER::Write_in_file() const
 {
   const unsigned int n_cells(dof_handler->Get_n_cells());
   const unsigned int n_dof(dof_handler->Get_n_dof());

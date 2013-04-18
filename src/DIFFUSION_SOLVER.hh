@@ -20,6 +20,7 @@ along with Janus.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _DIFFUSION_SOLVER_HH_
 #define _DIFFUSION_SOLVER_HH_
 
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <set>
@@ -58,7 +59,7 @@ class DIFFUSION_SOLVER
 
     /// Write the mesh and the solution in a file. Assume linear finite
     /// elements.
-    void Write_in_file(string* filename=NULL);
+    void Write_in_file(string* filename=NULL) const; 
 
   private :
     /// Refine the mesh and project the solution on the new grid.

@@ -110,6 +110,7 @@ void DIFFUSION_SOLVER::Solve()
   calc_timer->start();
   unsigned int group_iter(0);
   const unsigned int max_group_it(parameters.Get_max_group_it());
+  const unsigned int n_dof(dof_handler->Get_n_dof());
   const unsigned int n_groups(cross_sections.Get_n_groups());
   const unsigned int n_refinements(parameters.Get_n_refinements());
   const double group_tol(parameters.Get_group_tolerance());
@@ -118,7 +119,7 @@ void DIFFUSION_SOLVER::Solve()
     double group_conv(10.*group_tol);
     Epetra_MultiVector old_group_flux(*group_flux);
     Epetra_MultiVector scalar_flux(*scalar_flux_map,1);
-    //Epetra_MultiVector initial_guess(*scalar_flux_map,1);
+    Epetra_MultiVector initial_guess(*scalar_flux_map,1);
 
     MIP mip(comm,&parameters,dof_handler);
     // Loop over the groups
@@ -129,12 +130,12 @@ void DIFFUSION_SOLVER::Solve()
       {
         // Set the current group
         mip.Set_group(g);
-    //    initial_guess[0] = (*group_flux)[g];
-    Epetra_MultiVector initial_guess(*scalar_flux_map,1);
+        copy((*group_flux)[g],(*group_flux)[g]+n_dof,initial_guess[0]);
         mip.Solve_diffusion(n_groups,scalar_flux,*group_flux,&initial_guess);
 
-        old_group_flux[g] = (*group_flux)[g];
-        (*group_flux)[g] = scalar_flux[0];
+        for (unsigned int i=0; i<n_dof; ++i)
+        copy((*group_flux)[g],(*group_flux)[g]+n_dof,old_group_flux[g]);
+        copy(scalar_flux[0],scalar_flux[0]+n_dof,(*group_flux)[g]);
       }
       // Compute the convergence over all the groups
       group_conv = Compute_convergence(*group_flux,old_group_flux,n_groups);
@@ -145,7 +146,8 @@ void DIFFUSION_SOLVER::Solve()
         break;
     }
     // Refine the mesh
-    Refine_mesh(r);
+    if (r<n_refinements)
+      Refine_mesh(r);
   }
   calc_timer->stop();
   cout<<"Initialization time: "<<init_timer->totalElapsedTime()<<endl;
@@ -248,24 +250,36 @@ double DIFFUSION_SOLVER::Compute_convergence(Epetra_MultiVector const &flux,
   return conv;
 }
 
-void DIFFUSION_SOLVER::Write_in_file(string* filename_)
+void DIFFUSION_SOLVER::Write_in_file(string* filename_) const
 {
   const unsigned int n_cells(dof_handler->Get_n_cells());
   const unsigned int n_dof(dof_handler->Get_n_dof());
   const unsigned int n_groups(cross_sections.Get_n_groups());
-  d_vector offset(n_cells+1,0.);
+  ui_vector offset(n_cells+1,0.);
   vector<d_vector> points;
+  vector<d_vector> c_points;
+  points.reserve(n_dof);
+  c_points.reserve(n_dof+n_cells);
   vector<CELL*>::iterator cell_it(dof_handler->Get_mesh_begin());
   vector<CELL*>::iterator cell_end(dof_handler->Get_mesh_end());
+  Epetra_Map c_map(n_cells,0,*comm);
+  Epetra_MultiVector c_flux(c_map,cross_sections.Get_n_groups());
 
   for (; cell_it<cell_end; ++cell_it)
   {
     const unsigned int cell_id((*cell_it)->Get_id());
     FINITE_ELEMENT const* const fe((*cell_it)->Get_fe());
     vector<d_vector> tmp_points((*cell_it)->Reorder_vertices());
+    d_vector center(2,0.);
     const unsigned int tmp_pts_size(tmp_points.size());
     for (unsigned int i=0; i<tmp_pts_size; ++i)
+    {
       points.push_back(tmp_points[i]);
+      center[0] += tmp_points[i][0]/static_cast<const double> (tmp_pts_size);
+      center[1] += tmp_points[i][1]/static_cast<const double> (tmp_pts_size);
+    }
+    c_points.push_back(center);
+
     if (cell_id<n_cells-1)
       offset[cell_id+1] = offset[cell_id]+fe->Get_dof_per_cell();
   }
@@ -282,7 +296,6 @@ void DIFFUSION_SOLVER::Write_in_file(string* filename_)
   file<<n_cells<<" ";
   file<<n_dof<<" ";
   file<<n_groups<<" ";
-  file<<n_dof<<" ";
 
   for (unsigned int i=0; i<=n_cells; ++i)
     file<<offset[i]<<" ";
@@ -297,13 +310,24 @@ void DIFFUSION_SOLVER::Write_in_file(string* filename_)
     for (unsigned int i=0; i<n_dof; ++i)
       file<<(*group_flux)[g][i]<<"\n";
 
-  // Scalar flux is the zeroth angular moment
-  for (unsigned int g=0; g<n_groups; ++g)
-    for (unsigned int i=0; i<n_dof; ++i)
-      file<<(*group_flux)[g][i]<<"\n";
+  const unsigned int n_cpoints(c_points.size());
+  for (unsigned int i=0; i<n_cpoints; ++i)
+    file<<c_points[i][0]<<" "<<c_points[i][1]<<"\n";
 
-  // There is no sigma_e
-  file<<"false\n";
+  for (unsigned int g=0; g<n_groups; ++g)
+  {
+    for (unsigned int i=0; i<n_cells; ++i)
+    {
+      double center_flux(0.0);
+      double n_vertices(offset[i+1]-offset[i]);
+      for (unsigned int j=offset[i]; j<offset[i+1]; ++j)
+        center_flux += (*group_flux)[g][j];
+      c_flux[g][i] = center_flux/n_vertices;
+    }
+  }
+  for (unsigned int g=0; g<n_groups; ++g)
+    for (unsigned int i=0; i<n_cpoints; ++i)
+      file<<c_flux[g][i]<<"\n";
 
   file.close();
 }
