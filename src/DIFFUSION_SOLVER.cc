@@ -110,12 +110,12 @@ void DIFFUSION_SOLVER::Solve()
   calc_timer->start();
   unsigned int group_iter(0);
   const unsigned int max_group_it(parameters.Get_max_group_it());
-  const unsigned int n_dof(dof_handler->Get_n_dof());
   const unsigned int n_groups(cross_sections.Get_n_groups());
   const unsigned int n_refinements(parameters.Get_n_refinements());
   const double group_tol(parameters.Get_group_tolerance());
   for (unsigned int r=0; r<=n_refinements; ++r)
   {
+    const unsigned int n_dof(dof_handler->Get_n_dof());
     double group_conv(10.*group_tol);
     Epetra_MultiVector old_group_flux(*group_flux);
     Epetra_MultiVector scalar_flux(*scalar_flux_map,1);
@@ -133,7 +133,6 @@ void DIFFUSION_SOLVER::Solve()
         copy((*group_flux)[g],(*group_flux)[g]+n_dof,initial_guess[0]);
         mip.Solve_diffusion(n_groups,scalar_flux,*group_flux,&initial_guess);
 
-        for (unsigned int i=0; i<n_dof; ++i)
         copy((*group_flux)[g],(*group_flux)[g]+n_dof,old_group_flux[g]);
         copy(scalar_flux[0],scalar_flux[0]+n_dof,(*group_flux)[g]);
       }

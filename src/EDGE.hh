@@ -92,10 +92,16 @@ class EDGE
     double Get_v1_y() const;
 
     /// Get a pointer to #vertex_0.
-    d_vector const* const Get_v0() const;
+    d_vector const* const Get_v0_ptr() const;
 
     /// Get a pointer to #vertex_1.
-    d_vector const* const Get_v1() const;
+    d_vector const* const Get_v1_ptr() const;
+
+    /// Get a pointer to #vertex_0 (HACK for now).
+    d_vector& Get_v0();
+
+    /// Get a pointer to #vertex_1 (HACK for now).
+    d_vector& Get_v1();
 
     /// Set the normal in the ith component of #exterior_normal.
     void Set_exterior_normal(unsigned int i,
@@ -108,7 +114,7 @@ class EDGE
     /// Get the jth component of the normal in the ith component of #exterior_normal.
     double Get_exterior_normal_component(unsigned int i,unsigned int j) const;
 
- // private :
+  private :
     /// Flag to know if the edge is inside the medium, on the bottom boundary, on the
     /// the right boundary, on the top boundary or on the left boundary.
     EDGE_TYPE edge_type;
@@ -196,14 +202,24 @@ inline double EDGE::Get_v1_y() const
   return vertex_1[1];
 }
 
-inline d_vector const* const EDGE::Get_v0() const
+inline d_vector const* const EDGE::Get_v0_ptr() const
 {
   return &vertex_0;
 }
 
-inline d_vector const* const EDGE::Get_v1() const
+inline d_vector const* const EDGE::Get_v1_ptr() const
 {
   return &vertex_1;
+}
+
+inline d_vector& EDGE::Get_v0()
+{
+  return vertex_0;
+}
+
+inline d_vector& EDGE::Get_v1()
+{
+  return vertex_1;
 }
 
 inline void EDGE::Set_exterior_normal(unsigned int i,

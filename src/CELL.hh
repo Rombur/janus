@@ -89,8 +89,11 @@ class CELL
           
     /// Return the orthogonal length of the cell associated to the ith edge of
     /// the cell.
-    double Get_orthogonal_length(unsigned int i);
+    double Get_orthogonal_length(unsigned int i) const;
     
+    /// Return the area of the cell.
+    double Get_area() const;
+
     /// Return the begin iterator of the cell_edge vector.
     vector<EDGE*>::iterator Get_cell_edges_begin();
 
@@ -196,9 +199,14 @@ inline double CELL::Get_sigma_s(unsigned int group,unsigned int group_p,
   return sigma_s[group][group_p][lvl][mom];
 }
 
-inline double CELL::Get_orthogonal_length(unsigned int i)
+inline double CELL::Get_orthogonal_length(unsigned int i) const
 {
   return orthogonal_length[i];
+}
+
+inline double CELL::Get_area() const
+{
+  return area;
 }
 
 inline vector<EDGE*>::iterator CELL::Get_cell_edges_begin() 

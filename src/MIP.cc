@@ -252,9 +252,6 @@ void MIP::Solve_diffusion(const unsigned int n_groups,
     A->Apply(a0,b0);
     A->SetUseTranspose(false);
     A->Apply(a1,b1);
-    for (unsigned int j=0; j<dof_handler->Get_n_dof();++j)
-      if (fabs(b0[0][j]-b1[0][j])>1e-3)
-        cout<<"Fuck it "<<i<<" "<<j<<" "<<b0[0][j]<<" "<<b1[0][j]<<endl;
   }
 
   // Solve the system of equation
@@ -404,8 +401,7 @@ void MIP::Compute_diffusion_rhs(const unsigned int n_groups,
         fe->Get_mass_matrix());
     vector<EDGE*>::iterator cell_edge((*cell)->Get_cell_edges_begin());
     vector<EDGE*>::iterator cell_edge_end((*cell)->Get_cell_edges_end());
-    
-    // Compute the volumetric terms
+
     for (unsigned int g=0; g<n_groups; ++g)
     {
       if (g!=group)
@@ -418,7 +414,6 @@ void MIP::Compute_diffusion_rhs(const unsigned int n_groups,
       }
       else
       {
-
         const double src((*cell)->Get_source(group));
         for (unsigned int k=0; k<dof_per_cell; ++k)
         {

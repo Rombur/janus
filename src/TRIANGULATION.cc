@@ -224,16 +224,16 @@ void TRIANGULATION::Build_edges()
           {
             edges[min_v_it->second].Set_cell_index(1,i);
             cell_to_edge_gid[i].push_back(edges[min_v_it->second].Get_gid());
-            if ((edges[min_v_it->second].vertex_0[0]==vertex_0[0]) &&
-                (edges[min_v_it->second].vertex_0[1]==vertex_0[1]))
+            if ((edges[min_v_it->second].Get_v0_x()==vertex_0[0]) &&
+                (edges[min_v_it->second].Get_v0_y()==vertex_0[1]))
             {
-              edges[min_v_it->second].vertex_0.push_back(vertex_0[2]);
-              edges[min_v_it->second].vertex_1.push_back(vertex_1[2]);
+              edges[min_v_it->second].Get_v0().push_back(vertex_0[2]);
+              edges[min_v_it->second].Get_v1().push_back(vertex_1[2]);
             }
             else
             {
-              edges[min_v_it->second].vertex_1.push_back(vertex_0[2]);
-              edges[min_v_it->second].vertex_0.push_back(vertex_1[2]);
+              edges[min_v_it->second].Get_v1().push_back(vertex_0[2]);
+              edges[min_v_it->second].Get_v0().push_back(vertex_1[2]);
             }
             edge_exist = true;
             break;

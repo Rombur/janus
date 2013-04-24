@@ -120,16 +120,9 @@ namespace ERROR_ESTIMATOR
     vector<CELL*>::iterator cell_end(dof_handler->Get_mesh_end());
     for (; cell<cell_end; ++cell)
     {
-      const unsigned int i_min((*cell)->Get_first_dof());
-      const unsigned int i_max((*cell)->Get_last_dof());
-      const double n_i(i_max-i_min);
+      double area((*cell)->Get_area());
       for (unsigned int g=0; g<n_groups; ++g)
-      {
-        double average_flux(0.);
-        for (unsigned int i=i_min; i<i_max; ++i)
-          average_flux += fabs((*group_flux)[g][i]/n_i);
-        error_estimate[(*cell)->Get_id()+g*n_cells] /= pow(average_flux,2);
-      }
+        error_estimate[(*cell)->Get_id()+g*n_cells] /= area;
     }
 
     // Find the largest error and multiply it by the refinement threshold
@@ -151,8 +144,8 @@ namespace ERROR_ESTIMATOR
           vector<EDGE*>::iterator cell_edge_end((*cell)->Get_cell_edges_end());
           for (; cell_edge<cell_edge_end; ++cell_edge)
           {
-            d_vector const* const cell_vertex_0((*cell_edge)->Get_v0());
-            d_vector const* const cell_vertex_1((*cell_edge)->Get_v1());
+            d_vector const* const cell_vertex_0((*cell_edge)->Get_v0_ptr());
+            d_vector const* const cell_vertex_1((*cell_edge)->Get_v1_ptr());
             unsigned int index(2);
             if ((*cell)->Get_id()!=(*cell_edge)->Get_cell_index(0))
               ++index;

@@ -143,13 +143,13 @@ vector<d_vector> CELL::Reorder_vertices()
     const unsigned int vertices_done_size(vertices_done.size());
     for (unsigned int j=0; j<vertices_done_size; ++j)
     {
-      if (Is_same_vertex(cell_edges[i]->Get_v0(),vertices_done[j]))
+      if (Is_same_vertex(cell_edges[i]->Get_v0_ptr(),vertices_done[j]))
       {
         v0_done = true;
         if (j!=vertices_done_size-1)
           v0_switch = true;
       }
-      if (Is_same_vertex(cell_edges[i]->Get_v1(),vertices_done[j]))
+      if (Is_same_vertex(cell_edges[i]->Get_v1_ptr(),vertices_done[j]))
       {
         v1_done = true;
         if (j!=vertices_done_size-1)
@@ -168,14 +168,14 @@ vector<d_vector> CELL::Reorder_vertices()
     }
     if (v0_done==false)
     {
-      points[index] = *(cell_edges[i]->Get_v0());
-      vertices_done.push_back(cell_edges[i]->Get_v0());
+      points[index] = *(cell_edges[i]->Get_v0_ptr());
+      vertices_done.push_back(cell_edges[i]->Get_v0_ptr());
       ++index;
     }
     if (v1_done==false)
     {
-      points[index] = *(cell_edges[i]->Get_v1());
-      vertices_done.push_back(cell_edges[i]->Get_v1());
+      points[index] = *(cell_edges[i]->Get_v1_ptr());
+      vertices_done.push_back(cell_edges[i]->Get_v1_ptr());
       ++index;
     }
   }
