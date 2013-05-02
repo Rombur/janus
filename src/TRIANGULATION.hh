@@ -115,10 +115,10 @@ class TRIANGULATION
     /// Get the #EDGE_TYPE of an edge, when its vertices are known.
     EDGE_TYPE Get_edge_type(d_vector const &vertex_0,d_vector const &vertex_1);
 
-    void Project(unsigned int i,unsigned int dof,unsigned int &pos,
-        unsigned int n_old_vertices,
-        d_vector const &vertex,vector<ui_vector> &projection,
-        vector<vector<d_vector> > const &coarsest_vertices);
+    /// Create the vector used for the projection onto the fine mesh.
+    vector<ui_vector> Project(vector<vector<d_vector> > const &old_grid,
+        vector<vector<d_vector> > const &new_grid,ui_vector const &parents_map,
+        const unsigned int n_cells);
 
     /// Number of cells.
     unsigned int n_cells;

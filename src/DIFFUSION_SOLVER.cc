@@ -203,17 +203,17 @@ void DIFFUSION_SOLVER::Project_solution(vector<ui_vector> const &projection)
   Epetra_MultiVector* new_group_flux = new Epetra_MultiVector(*new_scalar_flux_map,
       cross_sections.Get_n_groups());
 
- // // Project group_flux on the new grid
- // for (unsigned int g=0; g<cross_sections.Get_n_groups(); ++g)
- // {
- //   for (unsigned int i=0; i<scalar_flux_size; ++i)
- //   {
- //     unsigned int n_old_vertices(projection[i].size());
- //     for (unsigned int j=0; j<n_old_vertices; ++j)
- //       (*new_group_flux)[g][i] += (*group_flux)[g][projection[i][j]];
- //     (*new_group_flux)[g][i] /= (double)(n_old_vertices);
- //   }
- // }
+  // Project group_flux on the new grid
+  for (unsigned int g=0; g<cross_sections.Get_n_groups(); ++g)
+  {
+    for (unsigned int i=0; i<scalar_flux_size; ++i)
+    {
+      unsigned int n_old_vertices(projection[i].size());
+      for (unsigned int j=0; j<n_old_vertices; ++j)
+        (*new_group_flux)[g][i] += (*group_flux)[g][projection[i][j]];
+      (*new_group_flux)[g][i] /= (double)(n_old_vertices);
+    }
+  }
 
   // Copy new_scalar_flux_map and new_group_flux to scalar_flux_map and
   // group_flux
