@@ -7,9 +7,12 @@ using namespace std;
 int main(int argc,char** argv)
 {
   const unsigned int n_cells(4);
+  const unsigned int n_x_cells(2);
+  const unsigned int n_y_cells(2);
   const unsigned int n_vertices(4);
   const unsigned int n_mat(3);
   const unsigned int n_src(3);
+  const CELL_TYPE cell_type(rectangle);
   const double x_0(0.);
   const double x_1(1.);
   const double x_2(2.);
@@ -93,6 +96,15 @@ int main(int argc,char** argv)
   // Check src_id
   for (unsigned int i=0; i<n_cells; ++i)
     assert(src_id[i]==triangulation.Get_src_id(i));
+
+  // Check the types of the cells
+  assert(cell_type==triangulation.Get_cell_type());
+
+  // Check the number of cells along x
+  assert(n_x_cells==triangulation.Get_n_x_cells());
+
+  // Check the number of cells along y
+  assert(n_y_cells==triangulation.Get_n_y_cells());
 
   return 0;
 }

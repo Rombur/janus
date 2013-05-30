@@ -44,21 +44,32 @@ int main(int argc,char** argv)
   unsigned int n_vertices(6);
   unsigned int first_dof(4);
   unsigned int last_dof(11);
-  double source(10.);
-  d_vector sigma_t(3,0.);
-  sigma_t[0] = 10.;
-  sigma_t[1] = 5.;
-  sigma_t[2] = 2.5;
-  vector<d_vector> sigma_s(3,d_vector(3,0.));
-  sigma_s[0][0] = 10.;
-  sigma_s[0][1] = 7.5;
-  sigma_s[0][2] = 5.5;
-  sigma_s[1][0] = 4.;
-  sigma_s[1][1] = 3.5;
-  sigma_s[1][2] = 2.5;
-  sigma_s[2][0] = 2.;
-  sigma_s[2][1] = 1.5;
-  sigma_s[2][2] = 0.5;
+  unsigned int n_groups(3);
+  unsigned int n_levels(2);
+  unsigned int L_max(4);
+  d_vector source(n_groups,0.);
+  d_vector sigma_e(n_groups,0.);
+  vector<d_vector> sigma_t(n_groups,d_vector(n_levels,0.));
+  vector<vector<vector<d_vector> > > sigma_s(n_groups, 
+      vector<vector<d_vector> >(n_groups,vector<d_vector> (n_levels,
+          d_vector(L_max+1,0.))));
+
+  for (unsigned int i=0; i<n_groups; ++i)
+    source[i] = double(i);
+
+  for (unsigned int i=0; i<n_groups; ++i)
+    sigma_e[i] = double(i);
+
+  for (unsigned int i=0; i<n_groups; ++i)
+    for (unsigned int j=0; j<n_levels; ++j)
+      sigma_t[i][j] = double(i+j);
+
+  for (unsigned int i=0; i<n_groups; ++i)
+    for (unsigned int j=0; j<n_groups; ++j)
+      for (unsigned int k=0; k<n_levels; ++k)
+        for (unsigned int l=0; l<L_max+1; ++l)
+          sigma_s[i][j][k][l] = double(i+j+k+l);
+
   d_vector cell_x(2,0.);
   d_vector cell_y(2,0.);
   cell_x[0] = 0.;
@@ -74,7 +85,8 @@ int main(int argc,char** argv)
   edges.push_back(&edge_4);
   edges.push_back(&edge_5);
   
-  CELL cell(cell_id,n_vertices,first_dof,last_dof,source,sigma_t,sigma_s,edges,fe);
+  CELL cell(cell_id,n_vertices,first_dof,last_dof,source,sigma_t,sigma_e,sigma_s,
+      edges,fe);
 
   // Check the cell id
   assert(cell_id==cell.Get_id());
@@ -89,23 +101,24 @@ int main(int argc,char** argv)
   assert(last_dof==cell.Get_last_dof());
 
   // Check the source
-  assert(source==cell.Get_source());
+  for (unsigned int i=0; i<n_groups; ++i)
+    assert(cell.Get_source(i)==double(i));
+
+  // Check sigma_e
+  for (unsigned int i=0; i<n_groups; ++i)
+    assert(cell.Get_sigma_e(i)==double(i));
 
   // Check sigma_t
-  assert(cell.Get_sigma_t(0)==10.);
-  assert(cell.Get_sigma_t(1)==5.);
-  assert(cell.Get_sigma_t(2)==2.5);
+  for (unsigned int i=0; i<n_groups; ++i)
+    for (unsigned int j=0; j<n_levels; ++j)
+      assert(cell.Get_sigma_t(i,j)==double(i+j));
 
   // Check sigma_s
-  assert(cell.Get_sigma_s(0,0)==10.);
-  assert(cell.Get_sigma_s(0,1)==7.5);
-  assert(cell.Get_sigma_s(0,2)==5.5);
-  assert(cell.Get_sigma_s(1,0)==4.); 
-  assert(cell.Get_sigma_s(1,1)==3.5);
-  assert(cell.Get_sigma_s(1,2)==2.5);
-  assert(cell.Get_sigma_s(2,0)==2.); 
-  assert(cell.Get_sigma_s(2,1)==1.5);
-  assert(cell.Get_sigma_s(2,2)==0.5);
+  for (unsigned int i=0; i<n_groups; ++i)
+    for (unsigned int j=0; j<n_groups; ++j)
+      for (unsigned int k=0; k<n_levels; ++k)
+        for (unsigned int l=0; l<L_max+1; ++l)
+          assert(cell.Get_sigma_s(i,j,k,l)==double(i+j+k+l));
 
   // Check the edge iterator
   vector<EDGE*>::iterator edge(cell.Get_cell_edges_begin());

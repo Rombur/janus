@@ -9,6 +9,7 @@ using namespace std;
 int main(int argc,char** argv)
 {
   unsigned int n_dir(12);
+  unsigned int n_mom(15);
   const double four_pi(4.*M_PI);
   d_vector omega(3,0.);
   omega[0] = 0.868846143426105;
@@ -20,6 +21,26 @@ int main(int argc,char** argv)
 
   // Check the number of direction
   assert(n_dir==quad.Get_n_dir());
+
+  // Check the number of momemts
+  assert(n_mom==quad.Get_n_mom());
+
+  // Check the degree of expension
+  assert(quad.Get_l(0)==0);
+  assert(quad.Get_l(1)==1);
+  assert(quad.Get_l(2)==1);
+  assert(quad.Get_l(3)==2);
+  assert(quad.Get_l(4)==2);
+  assert(quad.Get_l(5)==2);
+  assert(quad.Get_l(6)==3);
+  assert(quad.Get_l(7)==3);
+  assert(quad.Get_l(8)==3);
+  assert(quad.Get_l(9)==3);
+  assert(quad.Get_l(10)==4);
+  assert(quad.Get_l(11)==4);
+  assert(quad.Get_l(12)==4);
+  assert(quad.Get_l(13)==4);
+  assert(quad.Get_l(14)==4);
 
   // Check omega 
   Teuchos::SerialDenseVector<int,double> const* const omega_ptr(quad.Get_omega(0));

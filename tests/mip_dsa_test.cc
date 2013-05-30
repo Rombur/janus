@@ -22,9 +22,9 @@ int main(int argc,char** argv)
   Epetra_MpiComm comm(MPI_COMM_WORLD);
 
   const double four_pi(4.*M_PI);
-  string cross_sections_inp("cross_sections_mip.inp");
-  string geometry_inp("geometry_mip.inp");
-  string parameters_inp("parameters_mip.inp");
+  string cross_sections_inp("cross_sections_mip_dsa.inp");
+  string geometry_inp("geometry_mip_dsa.inp");
+  string parameters_inp("parameters_mip_dsa.inp");
 
   CROSS_SECTIONS cross_sections(&cross_sections_inp);
   TRIANGULATION triangulation(&geometry_inp);
@@ -88,7 +88,7 @@ int main(int argc,char** argv)
   solution[0][14] = 0.01581032;
   solution[0][15] = 0.04107403;
 
-  MIP precond(0,&dof_handler,&parameters,quad[0],&comm);
+  MIP precond(&comm,&parameters,&dof_handler,quad[0]);
   precond.Solve(flux_moments);
 
   for (unsigned int i=0; i<dof_handler.Get_n_dof(); ++i)

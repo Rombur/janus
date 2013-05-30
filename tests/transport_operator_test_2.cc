@@ -11,6 +11,7 @@
 #include "Epetra_MultiVector.h"
 #include "Epetra_MultiVector.h"
 #include "CELL.hh"
+#include "CROSS_SECTIONS.hh"
 #include "EDGE.hh"
 #include "GLC.hh"
 #include "LS.hh"
@@ -26,10 +27,10 @@ typedef vector<double> d_vector;
 int main(int argc,char** argv)
 {
   unsigned int n_sources(2);
-  unsigned int n_materials(2);
   unsigned int flux_moments_size(0);
   const double sqrt_4pi(2.*sqrt(M_PI));
   const double four_pi(4.*M_PI);
+  string cross_sections_inp("cross_sections_transport_2.inp");
   string geometry_inp("geometry_transport_2.inp");
   string parameters_inp("parameters_transport_2.inp");
 
@@ -59,6 +60,7 @@ int main(int argc,char** argv)
   solution[18] = 2.1154251;
   solution[19] = 2.1154251;
 
+  CROSS_SECTIONS cross_sections(&cross_sections_inp);
   TRIANGULATION triangulation(&geometry_inp);
   PARAMETERS parameters(&parameters_inp);
   vector<QUADRATURE*> quad;
@@ -68,14 +70,18 @@ int main(int argc,char** argv)
   triangulation.Build_edges();
 
   // Create the parameters
-  parameters.Read_parameters(n_sources,n_materials);
+  parameters.Read_parameters(n_sources);
+
+  // Create the cross sections
+  cross_sections.Build_fokker_planck_xs(triangulation.Get_n_materials());
+  cross_sections.Apply_ang_lvls_and_tc(parameters.Get_multigrid(),
+      parameters.Get_transport_correction(),parameters.Get_optimal_tc(),
+      triangulation.Get_n_materials(),parameters.Get_sn_order());
 
   // Build the quadrature
   unsigned int n_lvl(parameters.Get_n_levels());
   unsigned int tmp_sn(parameters.Get_sn_order());
-  unsigned int tmp_L_max(parameters.Get_L_max());
-  if (parameters.Get_mip()==true || parameters.Get_multigrid()==true)
-    --n_lvl;
+  unsigned int tmp_L_max(cross_sections.Get_L_max());
   quad.resize(n_lvl,NULL);
   for (unsigned int lvl=0; lvl<n_lvl; ++lvl)
   {
@@ -91,23 +97,27 @@ int main(int argc,char** argv)
   }                               
 
   // Build the dof handler
-  DOF_HANDLER dof_handler(&triangulation,parameters);
+  DOF_HANDLER dof_handler(&triangulation,parameters,cross_sections);
   dof_handler.Compute_sweep_ordering(quad);
   
   // Flux moments map and vector
   flux_moments_size = dof_handler.Get_n_dof()*quad[0]->Get_n_mom();
   Epetra_Map flux_moments_map(flux_moments_size,0,comm);
   Epetra_MultiVector flux_moments(flux_moments_map,1);
+  Epetra_MultiVector group_flux(flux_moments_map,1);
 
   // Solve the transport
   const unsigned int lvl(0);
   const unsigned int max_lvl(parameters.Get_n_levels()-1);
   TRANSPORT_OPERATOR transport_operator(&dof_handler,&parameters,&quad,&comm,
-      &flux_moments_map,lvl,max_lvl);
+      &flux_moments_map,lvl,max_lvl,cross_sections.Get_n_groups());
+
+  // Set the current group
+  transport_operator.Set_group(0);
 
   // Compute right-hand side for GMRES
   Epetra_MultiVector rhs(flux_moments);
-  transport_operator.Sweep(rhs,true);
+  transport_operator.Sweep(rhs,&group_flux);
 
   Epetra_LinearProblem problem(&transport_operator,&flux_moments,&rhs);
 
@@ -119,18 +129,20 @@ int main(int argc,char** argv)
   solver.SetAztecOption(AZ_conv,AZ_rhs);
 
   // Solve the transport equation
-  solver.Iterate(parameters.Get_max_it(),parameters.Get_tolerance());
+  solver.Iterate(parameters.Get_max_inner_it(),parameters.Get_inner_tolerance());
 
   // Apply the preconditioner to get the solution
   transport_operator.Apply_preconditioner(flux_moments);
 
   for (unsigned int i=0; i<20; ++i)
+  {
+    cout<<sqrt_4pi*flux_moments[0][i]<<" "<<solution[i]<<endl;
     assert(fabs(sqrt_4pi*flux_moments[0][i]-solution[i])<0.00001);
-
+  }
 
   MIP* mip(transport_operator.Get_mip());
   mip->Free_ml();
-  
+
   for (unsigned int i=0; i<n_lvl; ++i)
   {
     delete quad[i];

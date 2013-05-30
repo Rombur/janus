@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef _TRANSPORT_OPERATOR_HH_
 #define _TRANSPORT_OPERATOR_HH_
 
@@ -32,13 +51,13 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// Constructor used when the angular multigrid is not used.
     TRANSPORT_OPERATOR(DOF_HANDLER* dof,PARAMETERS const* param,
         QUADRATURE* quad,Epetra_Comm const* comm,
-        Epetra_Map const* flux_moments_map);
+        Epetra_Map const* flux_moments_map,unsigned int n_groups);
 
     /// Constructor used for the angular multigrid.
     TRANSPORT_OPERATOR(DOF_HANDLER* dof,PARAMETERS const* param,
         vector<QUADRATURE*> const* quad_vector,Epetra_Comm const* comm, 
         Epetra_Map const* flux_moments_map,unsigned int level,unsigned int max_level,
-        MIP* preconditioner=NULL);
+        unsigned int n_groups,MIP* preconditioner=NULL);
 
     ~TRANSPORT_OPERATOR();
 
@@ -52,11 +71,12 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// Compute the scattering given a flux.
     void Compute_scattering_source(Epetra_MultiVector const &x) const;
 
-    /// Perform a sweep. If rhs is false, the surfacic and the volumetric
+    /// Perform a sweep. If group_flux is NULL, the surfacic and the volumetric
     /// sources are not included in the sweep.
     /// @todo The sweep can be optimized to use less memory (only keep the
     /// front wave).
-    void Sweep(Epetra_MultiVector &flux_moments,bool rhs=false) const;
+    void Sweep(Epetra_MultiVector &flux_moments,
+        Epetra_MultiVector const* const group_flux=NULL) const;
 
     /// This method is not implemented.
     int SetUseTranspose(bool UseTranspose) {return 0;};
@@ -97,10 +117,19 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     /// object to x. x and y are the same on output.
     void Project_vector(Epetra_MultiVector &x,Epetra_MultiVector &y) const;
 
+    /// Set the current group.
+    void Set_group(unsigned int g);
+
     /// Return a pointer to the MIP DSA.
     MIP* Get_mip();
 
   private :
+    /// Compute the scattering source due to the upscattering and
+    /// downscattering to the current group.
+    void Compute_outer_scattering_source(Teuchos::SerialDenseVector<int,double> &b,
+        Epetra_MultiVector const* const group_flux,CELL const &cell,
+        const unsigned int idir) const;
+
     /// Return a Teuchos vector with the value of the significant flux for
     /// a given cell and a given direction.
     Teuchos::SerialDenseVector<int,double> Get_saf(unsigned int idir,
@@ -121,6 +150,10 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
     unsigned int lvl;
     /// Maximum level in the angular multigrid.
     unsigned int max_lvl;
+    /// Current group.
+    unsigned int group;
+    /// Number of groups.
+    unsigned int n_groups;
     /// Number of degrees of freedom associated to the problem.
     const unsigned int n_dof;
     /// Epetra communicator.

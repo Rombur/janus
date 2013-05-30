@@ -1,6 +1,26 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "DOF_HANDLER.hh"
 
-DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
+DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS const &param,
+    CROSS_SECTIONS const &cross_sections) :
   n_sf_per_dir(0),
   n_dof(0),
   max_dof_per_cell(0),
@@ -23,8 +43,7 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
     if (param.Get_fe_type()==bld)
       fe = new BLD(x,y);
     else
-      if (param.Get_fe_type()==pwld)
-        fe = new PWLD(x,y);
+      fe = new PWLD(x,y);
     vector<EDGE*> cell_edges(n_vertices);
     bool cell_saf(false);
     for (unsigned int j=0; j<n_vertices; ++j)
@@ -66,11 +85,23 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
       start_reflective_dof += fe->Get_dof_per_cell();
     }
     // Create the cells and append them in mesh
-    CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
+    if (cross_sections.Sigma_e_exist()==false)
+    {
+      CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
           param.Get_src(triangulation->Get_src_id(i)),
-          param.Get_sigma_t(triangulation->Get_mat_id(i)),
-          param.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
-    mesh.push_back(cell);
+          cross_sections.Get_sigma_t(triangulation->Get_mat_id(i)),
+          cross_sections.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
+      mesh.push_back(cell);
+    }
+    else
+    {
+      CELL* cell = new CELL(i,n_vertices,start_dof,start_dof+fe->Get_dof_per_cell(),
+          param.Get_src(triangulation->Get_src_id(i)),
+          cross_sections.Get_sigma_t(triangulation->Get_mat_id(i)),
+          cross_sections.Get_sigma_e(triangulation->Get_mat_id(i)),
+          cross_sections.Get_sigma_s(triangulation->Get_mat_id(i)),cell_edges,fe);
+      mesh.push_back(cell);
+    }
     start_dof += fe->Get_dof_per_cell();
     if (fe->Get_dof_per_cell()>max_dof_per_cell)
       max_dof_per_cell = fe->Get_dof_per_cell();
@@ -140,18 +171,20 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
           if ((*omega)[1]>0)
           {
             for (int y=0; y<n_y_cells; ++y)
-              for (int x=n_x_cells-1; x>0; --x)
+              for (int x=n_x_cells-1; x>-1; --x)
                 idir_sweep_order.push_back(x+y*n_x_cells);
           }
           else
           {
-            for (int y=n_y_cells-1; y>0; --y)
-              for (int x=n_x_cells-1; x>0; --x)
+            for (int y=n_y_cells-1; y>-1; --y)
+              for (int x=n_x_cells-1; x>-1; --x)
                 idir_sweep_order.push_back(x+y*n_x_cells);
           }
         }
         sweep_order[q].push_back(idir_sweep_order);
       }
+      // Compute the normal directions
+      Compute_most_normal_direction(quad[q],q);
     }
   }
   else
@@ -267,6 +300,8 @@ void DOF_HANDLER::Compute_sweep_ordering(vector<QUADRATURE*> &quad)
         }
         sweep_order[q].push_back(idir_sweep_order);
       }
+      // Compute the normal directions
+      Compute_most_normal_direction(quad[q],q);
     }
   }
 }

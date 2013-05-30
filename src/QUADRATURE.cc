@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "QUADRATURE.hh"
 
 QUADRATURE::QUADRATURE(unsigned int sn_,unsigned int L_max_,bool galerkin_) :
@@ -157,6 +176,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((l<sn) && ((m+l)%2==0))
           {
             M2D(idir,pos) = Ye[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }
@@ -166,6 +186,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((l<=sn) && ((m+l)%2==0))
           {
             M2D(idir,pos) = Yo[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }
@@ -185,6 +206,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((m+l)%2==0)
           {
             M2D(idir,pos) = Ye[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }
@@ -194,6 +216,7 @@ void QUADRATURE::Compute_harmonics(const double weight_sum)
           if ((m+l)%2==0)
           {
             M2D(idir,pos) = Yo[l][m][idir];
+            moment_to_order.push_back(l);
             ++pos;
           }
         }

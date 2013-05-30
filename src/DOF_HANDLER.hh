@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef _DOF_HANDLER_HH_
 #define _DOF_HANDLER_HH_
 
@@ -8,6 +27,7 @@
 #include "Teuchos_SerialDenseMatrix.hpp"
 #include "BLD.hh"
 #include "CELL.hh"
+#include "CROSS_SECTIONS.hh"
 #include "EDGE.hh"
 #include "FINITE_ELEMENT.hh"
 #include "PARAMETERS.hh"
@@ -29,7 +49,8 @@ typedef vector<unsigned int> ui_vector;
 class DOF_HANDLER
 {
   public :
-    DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param);
+    DOF_HANDLER(TRIANGULATION* triang,PARAMETERS const &param,
+        CROSS_SECTIONS const &cross_sections);
 
     ~DOF_HANDLER();
 
@@ -79,6 +100,9 @@ class DOF_HANDLER
 
     /// Return a pointer to a cell.
     CELL* Get_cell(unsigned int i);
+
+    /// Return a pointer to the triangulation associated to the dof_handler.
+    TRIANGULATION const *const Get_triangulation() const;
 
     /// Return the begin iterator of the mesh vector.
     vector<CELL*>::iterator Get_mesh_begin();
@@ -190,6 +214,11 @@ inline ui_vector const* const DOF_HANDLER::Get_sweep_order(unsigned int q,
 inline CELL* DOF_HANDLER::Get_cell(unsigned int i) 
 {
   return mesh[i];
+}
+    
+inline TRIANGULATION const *const DOF_HANDLER::Get_triangulation() const
+{
+  return triangulation;
 }
 
 inline vector<CELL*>::iterator DOF_HANDLER::Get_mesh_begin() 

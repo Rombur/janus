@@ -1,23 +1,100 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "CELL.hh"
 
 CELL::CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
-        unsigned int last_dof,double source,d_vector sigma_t,vector<d_vector> sigma_s,
+        unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
+        vector<vector<vector<d_vector> > > sigma_s,vector<EDGE*> edges,
+        FINITE_ELEMENT* fe) :
+  id(cell_id),
+  n_vertices(n_vertices),
+  first_dof(first_dof),
+  last_dof(last_dof),
+  source(source),
+  cell_edges(edges),
+  sigma_t(sigma_t),
+  sigma_s(sigma_s),
+  fe(fe)
+{
+  unsigned int n_groups(sigma_t.size());
+  unsigned int n_level(sigma_t[0].size());
+  D.resize(n_groups);
+  for (unsigned int g=0; g<n_groups; ++g)
+  {
+    if (sigma_s[n_level-1].size()>1)
+      D[g] = 1./(3.*(sigma_t[g][n_level-1]-sigma_s[g][g][n_level-1][1]));
+    else
+      D[g] = 1./(3.*sigma_t[g][n_level-1]);
+  }
+
+  // Compute the area and the perimeter of the cell.
+  Compute_area_and_perimeter();
+
+  // Compute the length of the cell in the direction orthogonal to the edge.
+  orthogonal_length.resize(n_vertices);
+  if (n_vertices==3)
+    for (unsigned int i=0; i<n_vertices; ++i)
+      orthogonal_length[i] = 2.*area/cell_edges[i]->Get_length();
+  else
+  {
+    if (n_vertices==4)
+      for (unsigned int i=0; i<n_vertices; ++i)
+        orthogonal_length[i] = area/cell_edges[i]->Get_length();
+    else
+    {
+      if (n_vertices%2==0)
+        for (unsigned int i=0; i<n_vertices; ++i)
+          orthogonal_length[i] = 4.*area/perimeter;
+      else
+        for(unsigned int i=0; i<n_vertices; ++i)
+          orthogonal_length[i] = 2.*area/perimeter+sqrt(2.*area/(n_vertices*
+                sin(2.*M_PI/n_vertices)));
+    }
+  }
+}
+
+CELL::CELL(unsigned int cell_id,unsigned int n_vertices,unsigned int first_dof,
+        unsigned int last_dof,d_vector source,vector<d_vector> sigma_t,
+        d_vector sigma_e,vector<vector<vector<d_vector> > > sigma_s,
         vector<EDGE*> edges,FINITE_ELEMENT* fe) :
   id(cell_id),
   n_vertices(n_vertices),
   first_dof(first_dof),
   last_dof(last_dof),
   source(source),
+  sigma_e(sigma_e),
+  cell_edges(edges),
   sigma_t(sigma_t),
   sigma_s(sigma_s),
-  cell_edges(edges),
   fe(fe)
 {
-  unsigned int n_level(sigma_t.size());
-  if (sigma_s[n_level-1].size()>1)
-    D = 1./(3.*(sigma_t[n_level-1]-sigma_s[n_level-1][1]));
-  else
-    D = 1./(3.*sigma_t[n_level-1]);
+  unsigned int n_groups(sigma_t.size());
+  unsigned int n_level(sigma_t[0].size());
+  D.resize(n_groups);
+  for (unsigned int g=0; g<n_groups; ++g)
+  {
+    if (sigma_s[n_level-1].size()>1)
+      D[g] = 1./(3.*(sigma_t[g][n_level-1]-sigma_s[g][g][n_level-1][1]));
+    else
+      D[g] = 1./(3.*sigma_t[g][n_level-1]);
+  }
 
   // Compute the area and the perimeter of the cell.
   Compute_area_and_perimeter();
@@ -66,13 +143,13 @@ vector<d_vector> CELL::Reorder_vertices()
     const unsigned int vertices_done_size(vertices_done.size());
     for (unsigned int j=0; j<vertices_done_size; ++j)
     {
-      if (Is_same_vertex(cell_edges[i]->Get_v0(),vertices_done[j]))
+      if (Is_same_vertex(cell_edges[i]->Get_v0_ptr(),vertices_done[j]))
       {
         v0_done = true;
         if (j!=vertices_done_size-1)
           v0_switch = true;
       }
-      if (Is_same_vertex(cell_edges[i]->Get_v1(),vertices_done[j]))
+      if (Is_same_vertex(cell_edges[i]->Get_v1_ptr(),vertices_done[j]))
       {
         v1_done = true;
         if (j!=vertices_done_size-1)
@@ -91,14 +168,14 @@ vector<d_vector> CELL::Reorder_vertices()
     }
     if (v0_done==false)
     {
-      points[index] = *(cell_edges[i]->Get_v0());
-      vertices_done.push_back(cell_edges[i]->Get_v0());
+      points[index] = *(cell_edges[i]->Get_v0_ptr());
+      vertices_done.push_back(cell_edges[i]->Get_v0_ptr());
       ++index;
     }
     if (v1_done==false)
     {
-      points[index] = *(cell_edges[i]->Get_v1());
-      vertices_done.push_back(cell_edges[i]->Get_v1());
+      points[index] = *(cell_edges[i]->Get_v1_ptr());
+      vertices_done.push_back(cell_edges[i]->Get_v1_ptr());
       ++index;
     }
   }

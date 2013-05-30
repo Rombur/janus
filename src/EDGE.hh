@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef _EDGE_HH_
 #define _EDGE_HH_
 
@@ -73,10 +92,16 @@ class EDGE
     double Get_v1_y() const;
 
     /// Get a pointer to #vertex_0.
-    d_vector const* const Get_v0() const;
+    d_vector const* const Get_v0_ptr() const;
 
     /// Get a pointer to #vertex_1.
-    d_vector const* const Get_v1() const;
+    d_vector const* const Get_v1_ptr() const;
+
+    /// Get a pointer to #vertex_0 (HACK for now).
+    d_vector& Get_v0();
+
+    /// Get a pointer to #vertex_1 (HACK for now).
+    d_vector& Get_v1();
 
     /// Set the normal in the ith component of #exterior_normal.
     void Set_exterior_normal(unsigned int i,
@@ -177,14 +202,24 @@ inline double EDGE::Get_v1_y() const
   return vertex_1[1];
 }
 
-inline d_vector const* const EDGE::Get_v0() const
+inline d_vector const* const EDGE::Get_v0_ptr() const
 {
   return &vertex_0;
 }
 
-inline d_vector const* const EDGE::Get_v1() const
+inline d_vector const* const EDGE::Get_v1_ptr() const
 {
   return &vertex_1;
+}
+
+inline d_vector& EDGE::Get_v0()
+{
+  return vertex_0;
+}
+
+inline d_vector& EDGE::Get_v1()
+{
+  return vertex_1;
 }
 
 inline void EDGE::Set_exterior_normal(unsigned int i,

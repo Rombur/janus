@@ -10,6 +10,7 @@ int main(int argc,char** argv)
   const unsigned int n_cells(3);
   const unsigned int n_mat(3);
   const unsigned int n_src(3);
+  const CELL_TYPE cell_type(polygon);
   const double x_0(0.);
   const double x_1(0.5);
   const double x_2(1.);
@@ -87,6 +88,9 @@ int main(int argc,char** argv)
   // Check src_id
   for (unsigned int i=0; i<n_cells; ++i)
     assert(src_id[i]==triangulation.Get_src_id(i));
+
+  // Check the type of cells
+  assert(cell_type==triangulation.Get_cell_type());
 
   return 0;
 }

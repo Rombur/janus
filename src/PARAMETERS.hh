@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef _PARAMETERS_HH_
 #define _PARAMETERS_HH_
 
@@ -24,8 +43,12 @@ enum BC_TYPE{vacuum,isotropic,most_normal,reflective};
 enum FE_TYPE{bld,pwld};
 
 /// Enum on the MIP solver type: cg_none (CG without preconditioning), cg_ssor
-/// (CG preconditioned with SSOR), cg_ml (CG preconditioned with ML) and agmg (AGMG).
+/// (CG preconditioned with SSOR), cg_ml (CG preconditioned with ML), and agmg (AGMG).
 enum MIP_SOLVER_TYPE{cg_none,cg_ssor,cg_ml,agmg};
+
+/// Enum on the permutation type used with CEPXS cross sections: none, linear
+/// or logarithmic.
+enum PERMUTATION_TYPE{none,linear,logarithmic};
 
 /// Enum on the quadrature type: glc (Gauss-Legendre-Chebyshev) or ls (Level
 /// Symmetric).
@@ -35,13 +58,18 @@ enum QUAD_TYPE{glc,ls};
 /// (GMRES with estimation of the condition number) or bicgstab (BiCGSTAB).
 enum SOLVER_TYPE{si,gmres,gmres_condnum,bicgstab};
 
+/// Enum on the type of cross section file: fp (Fokker-Planck), regular,
+/// regular_exs (regular with energy deposition cross sections), cepxs
+/// (CEPXS).
+enum XS_TYPE{fp,regular,regular_exs,cepxs};
+
 /**
  * Read and store all the parameters. Parameters are read in the following
  * order: solver type, tolerance, maximum number of iterations, Fokker-Planck
  * flag, transport correction flag, optimal transport correction flag,
- * multigrid flag, mip flag, quadrature type, Galerkin flag, L_max, Sn order,
+ * multigrid flag, mip flag, quadrature type, Galerkin flag, Sn order,
  * fe type, intensities of the source, bottom incoming flux, right incoming
- * flux, top incoming flux, left incoming flux, sigma_t, sigma_s.
+ * flux, top incoming flux, left incoming flux.
  */
 class PARAMETERS
 {
@@ -49,10 +77,16 @@ class PARAMETERS
     PARAMETERS(string* parameters_inputfile);
 
     /// Read the parameters input file.
-    void Read_parameters(unsigned int n_src,unsigned int n_mat);
+    void Read_parameters(const unsigned int n_src);
+
+    /// Read the parameters input file when a diffusion problem is solved.
+    void Read_diffusion_parameters(const unsigned int n_src);
 
     /// Return the flag on the transport correction.
     bool Get_transport_correction() const;
+
+    /// Return the flag on the optimal transport correction.
+    bool Get_optimal_tc() const;
 
     /// Return the flag on Galerkin quadrature.
     bool Get_galerkin() const;
@@ -63,38 +97,48 @@ class PARAMETERS
     /// Return true if MIP is used.
     bool Get_mip() const;
 
-    /// Return the maximum number of iterations.
-    unsigned int Get_max_it() const;
+    /// Return the maximum number of inner iterations.
+    unsigned int Get_max_inner_it() const;
 
-    /// Return #L_max.
-    unsigned int Get_L_max() const;
+    /// Return the maximum number of iterations on each supergroup.
+    unsigned int Get_max_supergroup_it() const;
+
+    /// Return the maximum number of iterations on all the groups.
+    unsigned int Get_max_group_it() const;
 
     /// Return Sn order.
     unsigned int Get_sn_order() const;
 
-    /// Return the number of "angular levels" (DSA counts as an angular level).
-    unsigned int Get_n_levels() const;
+    /// Return the number of "angular levels" (DSA counts as an angular
+    /// level).
+    inline unsigned int Get_n_levels() const;
 
     /// Return the level of verbosity of the code.
     unsigned int Get_verbose() const;
 
-    /// Return the relative tolerance.
-    double Get_tolerance() const;
+    /// Return the number of adaptive refinement to perform.
+    unsigned int Get_n_refinements() const;
+
+    /// Return the relative tolerance for the inner solver.
+    double Get_inner_tolerance() const;
+
+    /// Return the relative tolerance for the group and supergroup solver.
+    double Get_group_tolerance() const;
 
     /// Return the incoming flux of the bottom boundary.
-    double Get_inc_bottom() const;
+    double Get_inc_bottom(unsigned int group) const;
 
     /// Return the incoming flux of the right boundary.
-    double Get_inc_right() const;
+    double Get_inc_right(unsigned int group) const;
 
     /// Return the incoming flux of the top boundary.
-    double Get_inc_top() const;
+    double Get_inc_top(unsigned int group) const;
 
     /// Return the incoming flux of the left boundary.
-    double Get_inc_left() const;
+    double Get_inc_left(unsigned int group) const;
 
     /// Return the intensity of the source i.
-    double Get_src(unsigned int i) const;
+    d_vector Get_src(unsigned int i) const;
 
     /// Return the sum of the weights (1, 2pi or 4pi)
     double Get_weight_sum() const;
@@ -102,7 +146,10 @@ class PARAMETERS
     /// Return the damping factor used by SSOR.
     double Get_damping_factor() const;
 
-    /// Return the type iof aggregation used by ML (uncoupled, mis or
+    /// Return the refinement threshold used in AMR.
+    double Get_refinement_threshold() const;
+
+    /// Return the type of aggregation used by ML (uncoupled, mis or
     /// uncoupled-mis).
     AGGREGATION_TYPE Get_aggregation_type() const;
 
@@ -125,6 +172,14 @@ class PARAMETERS
     /// Return the type of finite elements used (BLD or PWLD).
     FE_TYPE Get_fe_type() const;
 
+    /// Return the type of MIP solver used (CG without preconditioning, CG
+    /// with SGS preconditioning, CG with ML preconditioning or AGMG).
+    MIP_SOLVER_TYPE Get_mip_solver_type() const;
+
+    /// Return the type of permutation used when CEPXS cross sections are
+    /// used: none, linear or logarithmic.
+    PERMUTATION_TYPE Get_permutation_type() const;
+
     /// Return the type of quadrature used (GLC or LS). 
     QUAD_TYPE Get_quad_type() const;
 
@@ -132,30 +187,11 @@ class PARAMETERS
     /// estimation of the condition number).
     SOLVER_TYPE Get_solver_type() const;
 
-    /// Return the type of MIP solver used (CG without preconditioning, CG
-    /// with SGS preconditioning, CG with ML preconditioning or AGMG).
-    MIP_SOLVER_TYPE Get_mip_solver_type() const;
-
-    /// Return sigma_t for the material i.
-    d_vector Get_sigma_t(unsigned int i) const;
-
-    /// Return sigma_s for the material i.
-    vector<d_vector> Get_sigma_s(unsigned int i) const;
+    /// Return the type of cross section file used (Fokker-Planck, regular,
+    /// regular with energy deposition cross sections, CEPXS).
+    XS_TYPE Get_xs_type() const;
 
   private :
-    /// Apply all the parameters.
-    void Apply_parameters(const unsigned int n_mat,d_vector const &correction_vector);
-
-    /// Build the Fokker-Planck cross sections.
-    void Build_fokker_planck_xs(const unsigned int n_mat);
-
-    /// Apply the "standard" extended transport correction or the optimal
-    /// transport corrections.
-    void Apply_transport_correction(unsigned int i_mat,unsigned int lvl,double L,
-        double correction);
-
-    /// If flag is true, Fokker-Planck cross-section \f$\left(\frac{\alpha}{2} (L(L+1)-l(l+1))\right)\f$ is used.
-    bool fokker_planck;
     /// If flag is true, the transport correction is used.
     bool transport_correction;
     /// If flag is true and that #transport_correction is true, the optimal
@@ -169,30 +205,31 @@ class PARAMETERS
     bool mip;
     /// If flas is true, a Galerkin quadrature is used.
     bool galerkin;
-    /// Maximum number of iterations.
-    unsigned int max_it;
-    /// L_max.
-    unsigned int L_max;
+    /// Maximum number of inner iterations.
+    unsigned int max_inner_it;
+    /// Maximum number of iterations for each supergroup.
+    unsigned int max_supergroup_it;
+    /// Maximum number of iterations over all the groups.
+    unsigned int max_group_it;
     /// Sn order.
     unsigned int sn;
     /// Number of levels of the angular multigrid.
     unsigned int n_levels;
     /// Level of verbosity of the code.
     unsigned int verbose;
-    /// Tolerance on the solver.
-    double tolerance;
-    /// Bottom incoming flux.
-    double inc_bottom;
-    /// Right incoming flux.
-    double inc_right;
-    /// Top incoming flux.
-    double inc_top;
-    /// Left incoming flux.
-    double inc_left;
+    /// Number of adaptive refinements to perform.
+    unsigned int n_refinements;
+    /// Tolerance on the inner solver (SI or Krylov solver).
+    double inner_tolerance;
+    /// Tolerance on the outer solver for the groups and supergroups.
+    double group_tolerance;
     /// Sum of the weights (1, 2pi or 4pi)
     double weight_sum;
     /// Damping factor used by SSOR.
     double damping_factor;
+    /// Threshold used for adaptive mesh refinement. The number has to be
+    /// between 0. and 1.
+    double refinement_threshold;
     /// Type of aggregation used by ML: uncoupled, mis or uncoupld-mis.
     AGGREGATION_TYPE aggregation_type;
     /// Type of boundary condition on the bottom side.
@@ -210,29 +247,36 @@ class PARAMETERS
     /// Type of MIP solver type: CG without preconditioning, CG preconditioned with 
     /// Symmetric-Gauss-Seidel, CG preconditioned with ML and AGMG.
     MIP_SOLVER_TYPE mip_solver_type;
+    /// Type of permutation used when CEPXS cross sections are used.
+    PERMUTATION_TYPE permutation_type;
     /// Type of solver: SI, BiCGSTAB or GMRES.
     SOLVER_TYPE solver_type;
-    /// Pointer to the name of the inpuit file containing the parameters of
+    /// Type of cross section file: Fokker-Planck, regular, regular with
+    /// energy deposition cross section, CEPXS.
+    XS_TYPE xs_type;
+    /// Pointer to the name of the input file containing the parameters of
     /// the problem.
     string* parameters_filename;
+    /// Bottom incoming flux.
+    d_vector inc_bottom;
+    /// Right incoming flux.
+    d_vector inc_right;
+    /// Top incoming flux.
+    d_vector inc_top;
+    /// Left incoming flux.
+    d_vector inc_left;
     /// Values of the source.
-    d_vector src;
-    /// Total cross section.
-    d_vector sigma_t;
-    /// Scattering cross section.
-    vector<d_vector> sigma_s;
-    /// \f$\alpha\f$ parameter of the Fokker-Planck cross sections.
-    d_vector alpha;
-    /// Total cross section for the different level of the angular multigrid.
-    vector<d_vector> sigma_t_lvl;
-    /// Scattering cross section for the different level of the angular
-    /// multigrid.
-    vector<vector<d_vector> > sigma_s_lvl;
+    vector<d_vector> src;
 };
 
 inline bool PARAMETERS::Get_transport_correction() const
 {
   return transport_correction;
+}
+
+inline bool PARAMETERS::Get_optimal_tc() const
+{
+  return optimal;
 }
 
 inline bool PARAMETERS::Get_galerkin() const
@@ -250,14 +294,19 @@ inline bool PARAMETERS::Get_mip() const
   return mip;
 }
 
-inline unsigned int PARAMETERS::Get_max_it() const
+inline unsigned int PARAMETERS::Get_max_inner_it() const
 {
-  return max_it;
+  return max_inner_it;
 }
 
-inline unsigned int PARAMETERS::Get_L_max() const
+inline unsigned int PARAMETERS::Get_max_supergroup_it() const
 {
-  return L_max;
+  return max_supergroup_it;
+}
+
+inline unsigned int PARAMETERS::Get_max_group_it() const
+{
+  return max_group_it;
 }
 
 inline unsigned int PARAMETERS::Get_sn_order() const
@@ -269,38 +318,48 @@ inline unsigned int PARAMETERS::Get_n_levels() const
 {
   return n_levels;
 }
- 
+
 inline unsigned int PARAMETERS::Get_verbose() const
 {
   return verbose;
 }
-
-inline double PARAMETERS::Get_tolerance() const
+    
+inline unsigned int PARAMETERS::Get_n_refinements() const
 {
-  return tolerance;
+  return n_refinements;
 }
 
-inline double PARAMETERS::Get_inc_bottom() const
+inline double PARAMETERS::Get_inner_tolerance() const
 {
-  return inc_bottom;
+  return inner_tolerance;
 }
 
-inline double PARAMETERS::Get_inc_right() const
+inline double PARAMETERS::Get_group_tolerance() const
 {
-  return inc_right;
+  return group_tolerance;
 }
 
-inline double PARAMETERS::Get_inc_top() const
+inline double PARAMETERS::Get_inc_bottom(unsigned int group) const
 {
-  return inc_top;
+  return inc_bottom[group];
 }
 
-inline double PARAMETERS::Get_inc_left() const
+inline double PARAMETERS::Get_inc_right(unsigned int group) const
 {
-  return inc_left;
+  return inc_right[group];
 }
 
-inline double PARAMETERS::Get_src(unsigned int i) const
+inline double PARAMETERS::Get_inc_top(unsigned int group) const
+{
+  return inc_top[group];
+}
+
+inline double PARAMETERS::Get_inc_left(unsigned int group) const
+{
+  return inc_left[group];
+}
+
+inline d_vector PARAMETERS::Get_src(unsigned int i) const
 {
   return src[i];
 }
@@ -313,6 +372,10 @@ inline double PARAMETERS::Get_weight_sum() const
 inline double PARAMETERS::Get_damping_factor() const
 {
   return damping_factor;
+}
+inline double PARAMETERS::Get_refinement_threshold() const
+{
+  return refinement_threshold;
 }
 
 inline AGGREGATION_TYPE PARAMETERS::Get_aggregation_type() const
@@ -345,14 +408,19 @@ inline FE_TYPE PARAMETERS::Get_fe_type() const
   return fe_type;
 }
 
-inline QUAD_TYPE PARAMETERS::Get_quad_type() const
-{
-  return quad_type;
-}
-
 inline MIP_SOLVER_TYPE PARAMETERS::Get_mip_solver_type() const
 {
   return mip_solver_type;
+}
+
+inline PERMUTATION_TYPE PARAMETERS::Get_permutation_type() const
+{
+  return permutation_type;
+}
+
+inline QUAD_TYPE PARAMETERS::Get_quad_type() const
+{
+  return quad_type;
 }
 
 inline SOLVER_TYPE PARAMETERS::Get_solver_type() const
@@ -360,14 +428,9 @@ inline SOLVER_TYPE PARAMETERS::Get_solver_type() const
   return solver_type;
 }
 
-inline d_vector PARAMETERS::Get_sigma_t(unsigned int i) const
+inline XS_TYPE PARAMETERS::Get_xs_type() const
 {
-  return sigma_t_lvl[i];
-}
-
-inline vector<d_vector> PARAMETERS::Get_sigma_s(unsigned int i) const
-{
-  return sigma_s_lvl[i];
+  return xs_type;
 }
 
 #endif

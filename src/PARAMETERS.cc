@@ -1,16 +1,37 @@
+/*
+Copyright (c) 2012, Bruno Turcksin.
+
+This file is part of Janus.
+
+Janus is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+he Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Janus is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Janus.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "PARAMETERS.hh"
 
 PARAMETERS::PARAMETERS(string* parameters_inputfile) :
+  n_refinements(0),
+  refinement_threshold(0.),
   parameters_filename(parameters_inputfile)
 {}
 
-void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
+void PARAMETERS::Read_parameters(const unsigned int n_src)
 {
   // Open the file to read it
   ifstream parameters_file(parameters_filename->c_str(),ios::in);
 
   // Check that the file was open properly
-  Check(parameters_file.good(),string ("Unable to open the file " + 
+  Check(parameters_file.good(),string ("Unable to open the file "+
         *parameters_filename + " containing the parameters."));
 
   string weight_sum_str;
@@ -19,7 +40,7 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   string right_bc_type_str;
   string top_bc_type_str;
   string fe_type_str;
-  string fokker_planck_str;
+  string xs_type_str;
   string galerkin_str;
   string mip_str;
   string mip_solver_type_str;
@@ -49,11 +70,20 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     }
   }
 
-  // Read the tolerance on the solver
-  parameters_file>>tolerance;
+  // Read the tolerance for the inner solver
+  parameters_file>>inner_tolerance;
+
+  // Read the tolerance for the outer solvers
+  parameters_file>>group_tolerance;
   
-  // Read the maximum number of iterations
-  parameters_file>>max_it;
+  // Read the maximum number of inner iterations
+  parameters_file>>max_inner_it;
+  
+  // Read the maximum number of supergroup iterations
+  parameters_file>>max_supergroup_it;
+  
+  // Read the maximum number of group iterations
+  parameters_file>>max_group_it;
 
   // Read the sum of the weight for the quadrature
   parameters_file>>weight_sum_str;
@@ -66,16 +96,40 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     else
       weight_sum = 1.0;
   }
+  
+  // Read the type of cross section file
+  parameters_file>>xs_type_str;
+  if (xs_type_str.compare("fp")==0)
+    xs_type = fp;
+  else
+  {
+    if (xs_type_str.compare("regular")==0)
+      xs_type = regular;
+    else
+    {
+      if (xs_type_str.compare("regular_exs")==0)
+        xs_type = regular_exs;
+      else
+      {
+        Check(xs_type_str.compare("cepxs")==0,string ("Unknown cross section type."));
+        xs_type = cepxs;
+      }
+    }
+    string permutation_type_str;
+    parameters_file>>permutation_type_str;
+    if (permutation_type_str.compare("none")==0)
+      permutation_type = none;
+    else
+    {
+      if (permutation_type_str.compare("logarithmic")==0)
+        permutation_type = logarithmic;
+      else
+        permutation_type = linear;
+    }
+  }
 
   // Read the verbosity of the code
   parameters_file>>verbose;
-  
-  // Read if Fokker-Planck cross-section is used
-  parameters_file>>fokker_planck_str;
-  if (fokker_planck_str.compare("true")==0)
-    fokker_planck = true;
-  else
-    fokker_planck = false;
   
   // Read if transport correction is used
   parameters_file>>transport_correction_str;
@@ -157,7 +211,10 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
   if (quad_type_str.compare("LS")==0)
     quad_type = ls;
   else
+  {
+    Check(quad_type_str.compare("GLC")==0,string ("Unknown quadrature type."));
     quad_type = glc;
+  }
   
   // Read if the quadrature is a Galerkin quadrature
   parameters_file>>galerkin_str;
@@ -165,9 +222,6 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     galerkin = true;
   else
     galerkin = false;
-  
-  // Read L_max
-  parameters_file>>L_max;
   
   // Read order of the Sn order
   parameters_file>>sn;
@@ -181,9 +235,12 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
     fe_type = pwld;
 
   // Read the values of the source
-  src.resize(n_src);
+  unsigned int n_groups(0);
+  parameters_file>>n_groups;
+  src.resize(n_src,d_vector (n_groups));
   for (unsigned int i=0; i<n_src; ++i)
-    parameters_file>>src[i];
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>src[i][g];
   
   // Read the type of boundary condition on the bottom side
   parameters_file>>bottom_bc_type_str;
@@ -200,11 +257,13 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
       else
       {
         Check(bottom_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the bottom boundary.");
+            string ("Unknown boundary condition type on the bottom boundary."));
         bottom_bc_type = isotropic;
       }
       // Read bottom incoming flux
-      parameters_file>>inc_bottom;
+      inc_bottom.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_bottom[g];
     }
   }
   // Read the type of boundary condition on the right side
@@ -222,11 +281,13 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
       else
       {
         Check(right_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the right boundary.");
+            string ("Unknown boundary condition type on the right boundary."));
         right_bc_type = isotropic;
       }
       // Read right incoming flux
-      parameters_file>>inc_right;
+      inc_right.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_right[g];
     }
   }
   // Read the type of boundary condition on the top side
@@ -244,11 +305,13 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
       else
       {
         Check(top_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the top boundary.");
+            string ("Unknown boundary condition type on the top boundary."));
         top_bc_type = isotropic;
       }
       // Read right incoming flux
-      parameters_file>>inc_top;
+      inc_top.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_top[g];
     }
   }
   // Read the type of boundary condition on the left side
@@ -266,124 +329,185 @@ void PARAMETERS::Read_parameters(unsigned int n_src,unsigned int n_mat)
       else
       {
         Check(left_bc_type_str.compare("isotropic")==0,
-            "Unknown boundary condition type on the left boundary.");
+            string ("Unknown boundary condition type on the left boundary."));
           left_bc_type = isotropic;
       }
       // Read right incoming flux
-      parameters_file>>inc_left;
-    }
-  }
-
-  // Read the total and the scattering cross section
-  d_vector correction_vector;
-  if (transport_correction==true && optimal==false)
-    correction_vector.resize(n_mat,0.);
-  sigma_t.resize(n_mat);
-  unsigned int j_max(0);
-  for (unsigned int jj=0; jj<=L_max; ++jj)
-    j_max += jj+1;
-  sigma_s.resize(n_mat,d_vector(j_max,0.));
-  if (fokker_planck==true)
-    alpha.resize(n_mat);
-  for (unsigned int i=0; i<n_mat; ++i)
-  {
-    parameters_file>>sigma_t[i];
-    if (fokker_planck==true)
-      parameters_file>>alpha[i];
-    else
-    {                               
-      for (unsigned int j=0; j<j_max; ++j)
-        parameters_file>>sigma_s[i][j];
-      if (transport_correction==true && optimal==false)
-        parameters_file>>correction_vector[i];
+      inc_left.resize(n_groups);
+      for (unsigned int g=0; g<n_groups; ++g)
+        parameters_file>>inc_left[g];
     }
   }
 
   // Close the file
   parameters_file.close();
 
-  Apply_parameters(n_mat,correction_vector);
-}
-
-void PARAMETERS::Apply_parameters(const unsigned int n_mat,
-    d_vector const &correction_vector)
-{
-  // Create the Fokker-Planck cross-section
-  if (fokker_planck==true)
-    Build_fokker_planck_xs(n_mat);
+  // Compute the number of level when the angular multigrid is used
   if (multigrid==false)
     n_levels = 1;
   else
     n_levels = ceil(log(double(sn))/log(2.));
-  if (mip==true)
-    ++n_levels;
-  // Loop over the level of the angular multigrid
-  sigma_t_lvl.resize(n_mat,d_vector(n_levels,0.));
-  sigma_s_lvl.resize(n_mat,vector<d_vector>(n_levels));
-  double L(L_max); 
-  for (unsigned int lvl=0; lvl<n_levels; ++lvl)
+}
+
+void PARAMETERS::Read_diffusion_parameters(const unsigned int n_src)
+{
+  // Type of cross section file
+  xs_type = regular_exs;
+
+  // Type of permutation
+  permutation_type = none;
+
+  // Angular multigrid cannot be used with diffusion
+  multigrid =false;
+
+  // Open the file to read it
+  ifstream parameters_file(parameters_filename->c_str(),ios::in);
+
+  // Check that the file was open properly
+  Check(parameters_file.good(),string ("Unable to open the file "+
+        *parameters_filename + " containing the parameters."));
+
+  string bottom_bc_type_str;
+  string left_bc_type_str;
+  string right_bc_type_str;
+  string top_bc_type_str;
+  string fe_type_str;
+  string mip_solver_type_str;
+
+  // Read the MIP solver type
+  parameters_file>>mip_solver_type_str;
+  if (mip_solver_type_str.compare("AGMG")==0 || 
+      mip_solver_type_str.compare("agmg")==0)
+    mip_solver_type = agmg;
+  else
   {
-    for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
+    if (mip_solver_type_str.compare("CG_ML")==0 || 
+        mip_solver_type_str.compare("cg_ml")==0)
     {
-      double L_2(ceil(L/2.));
-      sigma_t_lvl[i_mat][lvl] = sigma_t[i_mat];
-      sigma_s_lvl[i_mat][lvl] = d_vector(sigma_s[i_mat].begin(),
-          sigma_s[i_mat].end());
-      // Apply the transport correction
-      if (transport_correction==true)
+      string aggregation_type_str;
+      mip_solver_type = cg_ml;
+      // Read the aggregation type used
+      parameters_file>>aggregation_type_str;
+      if (aggregation_type_str.compare("Uncoupled")==0 ||
+          aggregation_type_str.compare("uncoupled")==0)
+        aggregation_type = uncoupled;
+      else
       {
-        double correction(0);
-        if (optimal==false)
-        {
-          if (lvl==0)
-            correction = correction_vector[i_mat];
-          else
-            correction = sigma_s_lvl[i_mat][lvl-1][L_2]; 
-        }
-        Apply_transport_correction(i_mat,lvl,L_2,correction);
+        if (aggregation_type_str.compare("MIS")==0 ||
+            aggregation_type_str.compare("mis")==0)
+          aggregation_type = mis;
+        else
+          aggregation_type = uncoupled_mis;
       }
     }
-    L = ceil(L/2.);
-    if (L==1.)
-      L = 0.;
-  }
-}
-
-void PARAMETERS::Build_fokker_planck_xs(const unsigned int n_mat)
-{               
-  for (unsigned int i_mat=0; i_mat<n_mat; ++i_mat)
-  {
-    unsigned int index(0);
-    for (unsigned int l=0; l<L_max; ++l)
-      for (unsigned int m=0; m<=l; ++m)
-      {
-        sigma_s[i_mat][index] = alpha[i_mat]/2.*(L_max*(L_max+1)-l*(l+1));
-        ++index;
-      }
-  }
-}
-
-void PARAMETERS::Apply_transport_correction(unsigned int i_mat,unsigned int lvl,
-    double L,double correction)
-{
-  if (optimal==true)
-  {
-    if (L==0.)
-      correction = 0.;
     else
     {
-      if (L==1.)
-        L = 0.;
-      unsigned int pos(0);
-      for (unsigned int jj=0; jj<=L; ++jj)
-        pos += jj+1;
-      correction = (sigma_s_lvl[i_mat][lvl][pos]+sigma_s_lvl[i_mat][lvl].back())/2.;
+      if (mip_solver_type_str.compare("CG_SSOR")==0 || 
+          mip_solver_type_str.compare("cg_ssor")==0)
+      {
+
+        mip_solver_type = cg_ssor;
+        parameters_file>>damping_factor;
+      }
+      else
+        mip_solver_type = cg_none;
     }
   }
+
+  // Read the tolerance for the inner solver
+  parameters_file>>inner_tolerance;
+
+  // Read the tolerance for the outer solvers
+  parameters_file>>group_tolerance;
   
-  sigma_t_lvl[i_mat][lvl] -= correction;
-  d_vector::iterator sigma_s(sigma_s_lvl[i_mat][lvl].begin());
-  d_vector::iterator sigma_s_end(sigma_s_lvl[i_mat][lvl].end());
-  for (; sigma_s<sigma_s_end; ++sigma_s)
-    *sigma_s -= correction;
+  // Read the maximum number of inner iterations
+  parameters_file>>max_inner_it;
+  
+  // Read the maximum number of group iterations
+  parameters_file>>max_group_it;
+
+  // Read the number of adaptive refinement to perform
+  parameters_file>>n_refinements;
+
+  // Reaf the threshold use for adaptive mesh refinement
+  parameters_file>>refinement_threshold;
+
+  // Read the verbosity of the code
+  parameters_file>>verbose;
+  
+  // Read the FEM type: BLD (Bilinear Discontinuous) of PWLD (PieceWise Linear
+  // Discontinuous)
+  parameters_file>>fe_type_str;
+  if (fe_type_str.compare("BLD")==0)
+    fe_type = bld;
+  else
+    fe_type = pwld;
+
+  // Read the values of the source
+  unsigned int n_groups(0);
+  parameters_file>>n_groups;
+  src.resize(n_src,d_vector (n_groups));
+  for (unsigned int i=0; i<n_src; ++i)
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>src[i][g];
+  
+  // Read the type of boundary condition on the bottom side
+  parameters_file>>bottom_bc_type_str;
+  if (bottom_bc_type_str.compare("vacuum")==0)
+    bottom_bc_type = vacuum;
+  else
+  {
+    Check(bottom_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the bottom boundary."));
+    bottom_bc_type = isotropic;
+    // Read bottom incoming flux
+    inc_bottom.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_bottom[g];
+  }
+  // Read the type of boundary condition on the right side
+  parameters_file>>right_bc_type_str;
+  if (right_bc_type_str.compare("vacuum")==0)
+    right_bc_type = vacuum;
+  else
+  {
+    Check(right_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the right boundary."));
+    right_bc_type = isotropic;
+    // Read right incoming flux
+    inc_right.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_right[g];
+  }
+  // Read the type of boundary condition on the top side
+  parameters_file>>top_bc_type_str;
+  if (top_bc_type_str.compare("vacuum")==0)
+    top_bc_type = vacuum;
+  else
+  {
+    Check(top_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the top boundary."));
+    top_bc_type = isotropic;
+    // Read right incoming flux
+    inc_top.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_top[g];
+  }
+  // Read the type of boundary condition on the left side
+  parameters_file>>left_bc_type_str;
+  if (left_bc_type_str.compare("vacuum")==0)
+    left_bc_type = vacuum;
+  else
+  {
+    Check(left_bc_type_str.compare("isotropic")==0,
+        string ("Unknown boundary condition type on the left boundary."));
+    left_bc_type = isotropic;
+    // Read right incoming flux
+    inc_left.resize(n_groups);
+    for (unsigned int g=0; g<n_groups; ++g)
+      parameters_file>>inc_left[g];
+  }
+
+  // Close the file
+  parameters_file.close();
 }
