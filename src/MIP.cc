@@ -101,7 +101,7 @@ void MIP::Solve(Epetra_MultiVector &flux_moments)
 {
   // Restrict the Krylov vector to build the lhs
   if (mip_map==NULL)
-    mip_map = new Epetra_Map(dof_handler->Get_n_dof(),0,*comm);
+    mip_map = new Epetra_Map(static_cast<int>(dof_handler->Get_n_dof()),0,*comm);
   Epetra_MultiVector b(*mip_map,1);
   for (unsigned int i=0; i<dof_handler->Get_n_dof(); ++i)
     b[0][i] = flux_moments[0][i];

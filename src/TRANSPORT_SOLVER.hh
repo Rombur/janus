@@ -35,7 +35,7 @@ class TRANSPORT_SOLVER
     TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,string* outputfile,
         Epetra_MpiComm* mpi_comm);
 
-    ~TRANSPORT_SOLVER();
+    virtual ~TRANSPORT_SOLVER();
 
     /// Solve the transport equation.
     void Solve();

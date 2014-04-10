@@ -19,6 +19,8 @@ class QUADRATURE
   public :
     QUADRATURE(unsigned int sn,unsigned int L_max,bool galerkin);
 
+    virtual ~QUADRATURE() {};
+
     /// Build the quadrature, i.e. M,D and omega (direction vector).
     void Build_quadrature(const double weight_sum);
 

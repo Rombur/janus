@@ -19,7 +19,7 @@ DOF_HANDLER::DOF_HANDLER(TRIANGULATION* triang,PARAMETERS &param) :
       x[j] = triangulation->Get_x_coord(i,j);
       y[j] = triangulation->Get_y_coord(i,j);
     }                                   
-    FINITE_ELEMENT* fe;
+    FINITE_ELEMENT* fe(NULL);
     if (param.Get_fe_type()==bld)
       fe = new BLD(x,y);
     else

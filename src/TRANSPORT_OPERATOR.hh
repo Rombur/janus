@@ -40,7 +40,7 @@ class TRANSPORT_OPERATOR : public Epetra_Operator
         Epetra_Map const* flux_moments_map,unsigned int level,unsigned int max_level,
         MIP* preconditioner=NULL);
 
-    ~TRANSPORT_OPERATOR();
+    virtual ~TRANSPORT_OPERATOR();
 
     /// Return the result of the transport operator applied to x in y. Return
     /// 0 if successful.

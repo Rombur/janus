@@ -19,6 +19,8 @@ class FINITE_ELEMENT
     FINITE_ELEMENT(d_vector const &cell_x,d_vector const &cell_y) :
       x(cell_x),y(cell_y){};
 
+    virtual ~FINITE_ELEMENT(){};
+
     /// Purely virtual function to build the 1-dimensional finite elements.
     virtual void Build_fe_1d() = 0;
 

@@ -17,7 +17,7 @@ AC_SUBST([GSL_CXXFLAGS])
 AC_ARG_WITH([trilinos-include],
            [AS_HELP_STRING([--with-trilinos-include],[location of the trilinos headers])],
            [TRILINOS_CXXFLAGS="-I$withval"],
-           [TRILINOS_CXXFLAGS="-I/usr/include/trilinos"])
+           [TRILINOS_CXXFLAGS="-I/home/bruno/Documents/vendors/trilinos/bin/include"])
 AC_SUBST([TRILINOS_CXXFLAGS])
 
 AC_ARG_WITH([lapack-include],
@@ -46,7 +46,7 @@ AC_SUBST([GSL_LIBS])
 AC_ARG_WITH([trilinos-lib],
             [AS_HELP_STRING([--with-trilinos-lib],[location of the trilinos library])],
             [TRILINOS_LIBS="-L$withval -ltrilinos_teuchos -ltrilinos_aztecoo -ltrilinos_epetra -ltrilinos_ifpack -ltrilinos_ml"],
-            [TRILINOS_LIBS="-L/usr/lib -ltrilinos_teuchos -ltrilinos_aztecoo -ltrilinos_epetra -ltrilinos_ifpack -ltrilinos_ml"])
+            [TRILINOS_LIBS="-Wl,-rpath /home/bruno/Documents/vendors/trilinos/bin/lib -L/home/bruno/Documents/vendors/trilinos/bin/lib -lteuchoscomm -lteuchoscore -lteuchosnumerics -lteuchosparameterlist -lteuchosremainder -laztecoo -lepetra -lifpack -lml"])
 AC_SUBST([TRILINOS_LIBS])
 
 AC_ARG_WITH([lapack-lib],

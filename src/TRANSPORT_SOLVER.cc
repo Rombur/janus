@@ -62,7 +62,7 @@ TRANSPORT_SOLVER::TRANSPORT_SOLVER(string* g_inputfile,string* p_inputfile,
   // Instantiate the flux moments map and vector
   flux_moments_size = dof_handler->Get_n_dof()*quad[0]->Get_n_mom()+
     dof_handler->Get_n_sf_per_dir()*quad[0]->Get_n_dir();
-  flux_moments_map = new Epetra_Map(flux_moments_size,0,*comm);
+  flux_moments_map = new Epetra_Map(static_cast<int>(flux_moments_size),0,*comm);
   flux_moments = new Epetra_MultiVector(*flux_moments_map,1);
   init_timer->stop();
 }

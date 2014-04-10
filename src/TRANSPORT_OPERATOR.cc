@@ -19,14 +19,14 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
 {
   if (dof_handler->Get_n_sf_per_dir()>0)
   {
-    saf_map = new Epetra_Map(dof_handler->Get_n_sf_per_dir()*quad->Get_n_dir(),
+    saf_map = new Epetra_Map(static_cast<int>(dof_handler->Get_n_sf_per_dir()*quad->Get_n_dir()),
         0,*comm);
     saf = new Epetra_MultiVector(*saf_map,1);
   }
 
   // Adapt the size of teuchos_vector
-  teuchos_vector.resize(dof_handler->Get_max_dof_per_cell());
-  for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
+  teuchos_vector.resize(dof_handler->Get_max_dof_per_cell()+1,NULL);
+  for (unsigned int i=1; i<=dof_handler->Get_max_dof_per_cell(); ++i)
     teuchos_vector[i] = new Teuchos::SerialDenseVector<int,double> (i);
 
   scattering_src = new vector<Teuchos::SerialDenseVector<int,double> >
@@ -61,8 +61,8 @@ TRANSPORT_OPERATOR::TRANSPORT_OPERATOR(DOF_HANDLER* dof,
   quad_vector(quad_vector)
 {
   // Adapt the size of teuchos_vector
-  teuchos_vector.resize(dof_handler->Get_max_dof_per_cell());
-  for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
+  teuchos_vector.resize(dof_handler->Get_max_dof_per_cell(),NULL);
+  for (unsigned int i=1; i<=dof_handler->Get_max_dof_per_cell(); ++i)
     teuchos_vector[i] = new Teuchos::SerialDenseVector<int,double> (i);
 
   scattering_src = new vector<Teuchos::SerialDenseVector<int,double> >
@@ -86,7 +86,7 @@ TRANSPORT_OPERATOR::~TRANSPORT_OPERATOR()
     scattering_src = NULL;
   }
 
-  for (unsigned int i=0; i<=dof_handler->Get_max_dof_per_cell(); ++i)
+  for (unsigned int i=1; i<=dof_handler->Get_max_dof_per_cell(); ++i)
   {
     delete teuchos_vector[i];
     teuchos_vector[i] = NULL;
@@ -114,7 +114,7 @@ int TRANSPORT_OPERATOR::Apply(Epetra_MultiVector const &x,Epetra_MultiVector &y)
     if (lvl!=max_lvl-1)
     {
       Epetra_MultiVector z(y);
-      Epetra_Map coarse_map(n_dof*(*quad_vector)[lvl+1]->Get_n_mom(),0,*comm);
+      Epetra_Map coarse_map(static_cast<int>(n_dof*(*quad_vector)[lvl+1]->Get_n_mom()),0,*comm);
       TRANSPORT_OPERATOR coarse_transport(dof_handler,param,quad_vector,comm,
           &coarse_map,lvl+1,max_lvl,precond);
 
@@ -167,7 +167,7 @@ void TRANSPORT_OPERATOR::Apply_preconditioner(Epetra_MultiVector &x)
   if (lvl!=max_lvl-1)
   {
     Epetra_MultiVector y(x);
-    Epetra_Map coarse_map(n_dof*(*quad_vector)[lvl+1]->Get_n_mom(),0,*comm);
+    Epetra_Map coarse_map(static_cast<int>(n_dof*(*quad_vector)[lvl+1]->Get_n_mom()),0,*comm);
     TRANSPORT_OPERATOR coarse_transport(dof_handler,param,quad_vector,comm,
         &coarse_map,lvl+1,max_lvl,precond);
 
@@ -237,7 +237,7 @@ void TRANSPORT_OPERATOR::Sweep(Epetra_MultiVector &flux_moments,bool rhs) const
   const unsigned int n_mom(quad->Get_n_mom());
   Teuchos::SerialDenseMatrix<int,double> const* const M2D(quad->Get_M2D());
   Teuchos::SerialDenseMatrix<int,double> const* const D2M(quad->Get_D2M());
-  Epetra_Map psi_map(n_dof,0,*comm);
+  Epetra_Map psi_map(static_cast<int>(n_dof),0,*comm);
   Teuchos::BLAS<int,double> blas;
   Teuchos::LAPACK<int,double> lapack;
   // Clear flux_moments
