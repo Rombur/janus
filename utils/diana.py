@@ -10,7 +10,7 @@ import TRIANGLE
 
 input_filename = 'test.1'
 output_filename = 'geometry'
-mesh_type = 'amr'
+mesh_type = 'review'
 alpha = 0.3 # Used only for random mesh and z-mesh
 x = [0.,1.] # Used only for random mesh
 y = [0.,1.] # Used only for random mesh
@@ -42,3 +42,5 @@ else :
     mesh.Generate_hexagon_mesh(side,n_layer,mat_id,src_id)
   elif mesh_type=='amr' :
     mesh.Generate_amr_mesh(n_refinement)
+  elif mesh_type=='review' :
+    mesh.Generate_review_mesh(100.,100.,10)

@@ -39,6 +39,41 @@ class MESH_GENERATOR(object) :
 
 #----------------------------------------------------------------------------#
 
+  def Generate_review_mesh(self,x,y,ny) :
+    """Generate a mesh of degenerated rectangles."""
+
+    mat_id = 0
+    src_id = 0
+    nx = 1
+    n_cells = nx*ny
+    self.output_file.write('polygon\n')
+    self.output_file.write(str(n_cells)+'\n')
+    dx = x
+    dy = y/ny
+    for i in xrange(n_cells) :
+      vertices = []
+      vertices.append([0.,i*dy])
+      for j in xrange(i) :
+        delta_x = dx/(i+1)
+        vertices.append([(j+1)*delta_x,i*dy])
+      vertices.append([dx,i*dy])
+      vertices.append([dx,(i+1)*dy])
+      for j in xrange(i+1) :
+        delta_x = dx/(i+2)
+        vertices.append([dx-(j+1)*delta_x,(i+1)*dy])
+      vertices.append([0,(i+1)*dy])
+      cell = [len(vertices),vertices,mat_id,src_id]
+      self.mesh.append(cell)
+      self.Write_cell(cell)
+
+# Close output file
+    self.output_file.close()
+
+# Create a file readable by apollo
+    self.Create_apollo_file()
+
+#----------------------------------------------------------------------------#
+
   def Generate_random_mesh(self,x,y,alpha) :
     """Generate a randomized mesh."""
 
@@ -816,7 +851,7 @@ class MESH_GENERATOR(object) :
     n_cells = len(self.mesh)
     n_dof = 0
     offset = np.zeros(n_cells+1)
-    repartition = np.zeros((8,1))
+    repartition = np.zeros((9,1))
 
     index = 1
     for cell in self.mesh :
@@ -836,7 +871,10 @@ class MESH_GENERATOR(object) :
     for cell in self.mesh :
       for vertex in cell[1] :
         self.output_silo.write(str(vertex[0])+' '+str(vertex[1])+'\n')
-      repartition[len(cell[1])-3] += 1
+      if len(cell[1])-3 < 8 :
+        repartition[len(cell[1])-3] += 1
+      else :
+        repartition[8] += 1
 
 # Write the material id
     for cell in self.mesh :
@@ -858,6 +896,7 @@ class MESH_GENERATOR(object) :
     print '-octagons: ',repartition[5]
     print '-nonagons: ',repartition[6]
     print '-decagons: ',repartition[7]
+    print '-others: ',repartition[8]
     print 'Number of degrees of freedom: ',n_dof
 
 #----------------------------------------------------------------------------#
